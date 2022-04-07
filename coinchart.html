@@ -1,0 +1,453 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+
+<style>
+
+#piechart{
+
+ margin-top : 1px;
+
+}
+#piechart2{
+
+ margin-top : 1px;
+
+}
+.container1 {
+ width: 80%;
+ height: 250px;
+ margin-left: auto;
+ margin-bottom: 5px;
+ padding-bottom: 5px; 
+ padding-top: 10px;
+}
+.one {
+ width: 60%;
+ height: 250px;
+ padding-top: 10px;
+ margin-bottom: 5px;
+ 
+ padding-bottom: 5px;
+ font-size: 36px;
+ font-weight: bold;
+ font-color: #B2B9C0;
+ float: left;
+}
+img{float:left ;
+
+
+}
+.two {
+
+ line-height : 40px;
+ font-size: 24px;
+ margin-left: 45%;
+ height: 200px;
+ background: white;
+ padding-top:10px;
+}
+#td7:hover{background-color:#B2B9C0 ; border: solid; border-color: #3E5062; font-weight: bold}
+#td1:hover{background-color:#B2B9C0 ; border: solid; border-color: #3E5062; font-weight: bold}
+#td24:hover{background-color:#B2B9C0 ; border: solid; border-color: #3E5062; font-weight: bold}
+.red {
+ color:#FF0000;
+}
+
+.green {
+ color:#2C6700;
+}
+</style>
+
+
+ <script type="text/javascript" src="https://www.gstatic.com/charts/loader.js"></script>
+ <script type="text/javascript">
+ google.charts.load('current', {'packages':['corechart']});
+ google.charts.setOnLoadCallback(drawChart);
+
+
+ 
+ var xhr1 = new XMLHttpRequest();
+xhr1.open("GET", "https://api.coinmarketcap.com/v1/ticker/bitcoin/?convert=EUR", false);
+xhr1.send();
+
+
+var add = JSON.parse(xhr1.response);
+
+
+var curr = add[0]; 
+
+
+var europrice1 = curr['price_eur'];
+var europrice = europrice1.substring(0, 8);
+//console.log(europrice);
+
+
+
+var usdprice1 = curr['price_usd'];
+var usdprice = usdprice1.substring(0, 8);
+
+var percentChangein1Hr = curr['percent_change_1h'];
+var percentChangein24Hr = curr['percent_change_24h'];
+var percentChangein7d = curr['percent_change_7d'];
+
+
+ var xhr = new XMLHttpRequest();
+xhr.open("GET", "https://min-api.cryptocompare.com/data/histoday?fsym=BTC&tsym=USD&aggregate=1&limit=30&e=CCCAGG", false);
+xhr.send();
+
+var aa = JSON.parse(xhr.response);
+
+
+ var js_array = aa.Data ; 
+
+ var monthNames = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec" ];
+
+ 
+ 
+ function drawChart() {
+
+ 
+ var dataArray = [['Language','USD', {type: 'string', role: 'tooltip'}]];
+ // dataArray.addColumn()
+
+ for (var n =0; n < js_array.length-1; n++)
+ {
+ 
+ 
+ var t = new Date(1970, 0, 1); // Epoch
+ t.setSeconds(js_array[n]['time']);
+ var da = ( ("0" + t.getDate()).slice(-2) ) ; 
+ dataArray.push ([ (monthNames[t.getMonth()])+"-"+ ( ("0" + t.getDate()).slice(-2) ), js_array[n]['close'], (monthNames[t.getMonth()])+"-"+ ( ("0" + t.getDate()).slice(-2) ) +"\n"+"Opened At : " +js_array[n]['open'] +" USD \n Closed At: "+js_array[n]['close']+" USD"]) ;
+ 
+ }
+ 
+ var data = google.visualization.arrayToDataTable(dataArray);
+
+ 
+var options = {
+ title: 'Bitcoin in last 30 Days',
+ height: 450,
+ colors: ['#E94D20'],
+ 'chartArea': {
+ 
+ left: '16%', top: '7%', width: "70%", height: "65%",
+ 
+ },
+ pointSize : 10,
+ pointShape: 'square',
+ curveType: 'function',
+ legend: 'none',
+ tooltip: {isHtml: true},
+ vAxis: {title: "Price in USD",
+ gridlines: {
+ count: -1
+ },
+
+ titleTextStyle: {color: "green"}},
+ hAxis: {title: "TimeLine", 
+ 
+ showTextEvery: 3,
+
+ titleTextStyle: {color: "green"}
+ 
+ },
+ lineWidth: 2 
+
+ };
+ var chart = new google.visualization.LineChart(document.getElementById('piechart'));
+ 
+ chart.draw(data, options);
+}
+
+</script>
+</head>
+<body>
+
+
+
+
+
+
+
+
+ <!-- Display the pie chart -->
+ <style>div.google-visualization-tooltip { transform: rotate(340deg);width:200px; background-color: #3E5062; border: none}</style>
+<style>div.google-visualization-tooltip > ul > li > span {
+ color: #B2B9C0 !important;
+} </style>
+
+
+<section class="container1">
+ 
+ 
+ <div class="one"> <img class="img" src="http://thisisdistributed.com/wp-content/uploads/2017/09/bitcoin.png" alt="Bitcoin">
+ <span style="padding-left:10px; padding-top:30px; line-height : 40px">TODAY </span>  <br>
+ <span style="padding-left:10px ; padding-top:20px;  line-height : 40px"> USD :  <script type="text/javascript">
+ document.write(usdprice) ;
+ </script> </span> &#36; <br>
+ <span style="padding-left:10px; padding-top:20px ; line-height : 40px "> EURO :  <script type="text/javascript">
+ document.write(europrice) ;
+ </script> &#8364; </span> 
+ </img>
+ 
+ 
+ 
+ </div>
+ 
+ <div class="two">
+
+ Last 1 Hour: <span id="td1"><script type="text/javascript">
+ var element = document.getElementById("td1");
+
+ if(percentChangein1Hr<0)
+ {
+
+ element.className="red" ;
+
+ }
+ else
+ {
+ element.className="green";
+ }
+ 
+ 
+ document.write(percentChangein1Hr) ;
+ </script> %
+</span> 
+<br>
+ Last 24 Hours : <span id="td24"> <script type="text/javascript">
+ var element = document.getElementById("td24");
+
+ if(percentChangein24Hr<0)
+ {
+
+ element.className="red" ;
+
+ }
+ else
+ {
+ element.className="green";
+ } 
+
+ document.write(percentChangein24Hr) ;
+ </script> %
+</span> 
+
+<br>
+ Last 7 Days :<span id="td7"> <script type="text/javascript">
+
+
+ var element = document.getElementById("td7");
+
+ if(percentChangein7d<0)
+ {
+
+ element.className="red" ;
+
+ }
+ else
+ {
+ element.className="green";
+ } 
+
+ document.write(percentChangein7d) ;
+ </script> %
+</span> 
+
+ 
+ </div>
+</section>
+ 
+  <button id="30d" onclick="monthchart()" disabled> 30Days </button>
+ <button id="3d" onclick="daychart()"> 7Days </button>
+
+ <div id="piechart" ></div>
+ <div id="piechart2" ></div>
+ 
+</body>
+
+<script>
+
+function daychart()
+{
+	document.getElementById('piechart').style.display = 'none';
+	document.getElementById('3d').disabled = true;
+		document.getElementById('30d').disabled = false;
+// document.createElement("piechart2");
+
+
+
+ google.charts.load('current', {'packages':['corechart']});
+ google.charts.setOnLoadCallback(drawChart);
+
+
+
+ 
+
+ var xhr = new XMLHttpRequest();
+xhr.open("GET", "https://min-api.cryptocompare.com/data/histoday?fsym=BTC&tsym=USD&aggregate=1&limit=7&e=CCCAGG", false);
+xhr.send();
+
+var aa = JSON.parse(xhr.response);
+
+
+ var js_array = aa.Data ; 
+
+ var monthNames = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec" ];
+
+ 
+ 
+ function drawChart() {
+
+ 
+ var dataArray = [['Language','USD', {type: 'string', role: 'tooltip'}]];
+ // dataArray.addColumn()
+
+ for (var n =0; n < js_array.length-1; n++)
+ {
+ 
+ 
+ var t = new Date(1970, 0, 1); // Epoch
+ t.setSeconds(js_array[n]['time']);
+ var da = ( ("0" + t.getDate()).slice(-2) ) ; 
+ dataArray.push ([ (monthNames[t.getMonth()])+"-"+ ( ("0" + t.getDate()).slice(-2) ), js_array[n]['close'], (monthNames[t.getMonth()])+"-"+ ( ("0" + t.getDate()).slice(-2) ) +"\n"+"Opened At : " +js_array[n]['open'] +" USD \n Closed At: "+js_array[n]['close']+" USD"]) ;
+ 
+ }
+ 
+ var data = google.visualization.arrayToDataTable(dataArray);
+
+ 
+var options = {
+ title: 'Bitcoin in last 7 Days',
+ height: 450,
+ colors: ['#E94D20'],
+ 'chartArea': {
+ 
+ left: '16%', top: '7%', width: "70%", height: "65%",
+ 
+ },
+ pointSize : 10,
+ pointShape: 'square',
+ curveType: 'function',
+ legend: 'none',
+ tooltip: {isHtml: true},
+ vAxis: {title: "Price in USD",
+ gridlines: {
+ count: -1
+ },
+
+ titleTextStyle: {color: "green"}},
+ hAxis: {title: "TimeLine", 
+ 
+ showTextEvery: 1,
+
+ titleTextStyle: {color: "green"}
+ 
+ },
+ lineWidth: 2 
+
+ };
+
+ var chart1 = new google.visualization.LineChart(document.getElementById('piechart2'));
+  chart1.draw(data, options);
+}
+
+	document.getElementById('piechart2').style.display = 'block';
+
+}
+
+
+
+function monthchart()
+{
+	document.getElementById('piechart2').style.display = 'none';
+		document.getElementById('30d').disabled = true;
+		document.getElementById('3d').disabled = false;
+	
+// document.createElement("piechart2");
+
+
+
+ google.charts.load('current', {'packages':['corechart']});
+ google.charts.setOnLoadCallback(drawChart);
+
+
+
+ var xhr = new XMLHttpRequest();
+xhr.open("GET", "https://min-api.cryptocompare.com/data/histoday?fsym=BTC&tsym=USD&aggregate=1&limit=30&e=CCCAGG", false);
+xhr.send();
+
+var aa = JSON.parse(xhr.response);
+
+
+ var js_array = aa.Data ; 
+
+ var monthNames = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec" ];
+
+ 
+ 
+ function drawChart() {
+
+ 
+ var dataArray = [['Language','USD', {type: 'string', role: 'tooltip'}]];
+ // dataArray.addColumn()
+
+ for (var n =0; n < js_array.length-1; n++)
+ {
+ 
+ 
+ var t = new Date(1970, 0, 1); // Epoch
+ t.setSeconds(js_array[n]['time']);
+ var da = ( ("0" + t.getDate()).slice(-2) ) ; 
+ dataArray.push ([ (monthNames[t.getMonth()])+"-"+ ( ("0" + t.getDate()).slice(-2) ), js_array[n]['close'], (monthNames[t.getMonth()])+"-"+ ( ("0" + t.getDate()).slice(-2) ) +"\n"+"Opened At : " +js_array[n]['open'] +" USD \n Closed At: "+js_array[n]['close']+" USD"]) ;
+ 
+ }
+ 
+ var data = google.visualization.arrayToDataTable(dataArray);
+
+ 
+var options = {
+ title: 'Bitcoin in last 30 Days',
+ height: 450,
+ colors: ['#E94D20'],
+ 'chartArea': {
+ 
+ left: '16%', top: '7%', width: "70%", height: "65%",
+ 
+ },
+ pointSize : 10,
+ pointShape: 'square',
+ curveType: 'function',
+ legend: 'none',
+ tooltip: {isHtml: true},
+ vAxis: {title: "Price in USD",
+ gridlines: {
+ count: -1
+ },
+
+ titleTextStyle: {color: "green"}},
+ hAxis: {title: "TimeLine", 
+ 
+ showTextEvery: 3,
+
+ titleTextStyle: {color: "green"}
+ 
+ },
+ lineWidth: 2 
+
+ };
+
+ var chart1 = new google.visualization.LineChart(document.getElementById('piechart'));
+  chart1.draw(data, options);
+  
+  
+}
+
+	document.getElementById('piechart').style.display = 'block';
+
+}
+
+
+</script>
+</html>

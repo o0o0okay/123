@@ -1,16 +1,22 @@
 {
-	"photos":[
-		{
-			"imgUrl" : "https://academy-public.coinmarketcap.com/srd-optimized-uploads/bc530450801b44dfbf24212e4a738be3.jpg"
-		},
-				{
-			"imgUrl" : "https://www.downloadha.com/pic/Homeez-DC20220610.jpg"
-		},
-				{
-			"imgUrl" : "https://img5.downloadha.com/hosein/files/2022/07/MotoGP-22-ps4-cover-small.jpg"
-		},
-				{
-			"imgUrl" : "https://img5.downloadha.com/hosein/files/2022/07/Youtubers-Life-2-ps4-cover-small.jpg"
-		}
-	]
+  "stats": {
+    "usdt-rls": {
+      "isClosed": false,
+      "bestSell": "570390",
+      "bestBuy": "570380",
+      "volumeSrc": "5400438.196343261825",
+      "volumeDst": "3108989002648.0928986275",
+      "latest": "570320",
+      "dayLow": "500000",
+      "dayHigh": "606000",
+      "dayOpen": "584990",
+      "dayClose": "570320",
+      "dayChange": "-2.51"
+    }
+  },
+  "global": {
+    "binance": {
+      "nmr": 20.02
+    }
+  }
 }

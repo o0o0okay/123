@@ -1,1 +1,9 @@
-[{"status": "ok"}]
+[
+  "status": "ok",
+  "stats": {
+    "usdt-rls": {
+      "bestSell": "574490",
+      "dayChange": "-4.25"
+    }
+  }
+]

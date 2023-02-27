@@ -1,17 +1,3 @@
 {
-  "stats": {
-    "usdt-rls": {
-      "isClosed": false,
-      "bestSell": "571890",
-      "bestBuy": "571680",
-      "volumeSrc": "4596678.752179094425",
-      "volumeDst": "2621306486024.725587031",
-      "latest": "571890",
-      "dayLow": "500000",
-      "dayHigh": "606000",
-      "dayOpen": "599800",
-      "dayClose": "571890",
-      "dayChange": "-4.65"
-    }
-  }
+  "status": "ok"
 }

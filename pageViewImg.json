@@ -1,17 +1,17 @@
-
-  {
-    "stats": {
+{
+  "stats": {
     "usdt-rls": {
       "isClosed": false,
-      "bestSell": "570390",
-      "bestBuy": "570380",
-      "volumeSrc": "5400438.196343261825",
-      "volumeDst": "3108989002648.0928986275",
-      "latest": "570320",
+      "bestSell": "571890",
+      "bestBuy": "571680",
+      "volumeSrc": "4596678.752179094425",
+      "volumeDst": "2621306486024.725587031",
+      "latest": "571890",
       "dayLow": "500000",
       "dayHigh": "606000",
-      "dayOpen": "584990",
-      "dayClose": "570320",
-      "dayChange": "-2.51" }
+      "dayOpen": "599800",
+      "dayClose": "571890",
+      "dayChange": "-4.65"
     }
   }
+}

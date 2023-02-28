@@ -5,5 +5,10 @@
       "bestSell": "574490",
       "dayChange": "-4.25"
     }
-  }
+  },
+  "global": {
+    "binance": {
+      "mkr": 779.7,
+      "srm": 0.287
+    }
 }

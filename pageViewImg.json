@@ -1,16 +1,4 @@
 {
-  "fields": [
-    "id",
-    "name",
-    "symbol",
-    "slug",
-    "is_active",
-    "status",
-    "rank",
-    "address",
-    "first_historical_data",
-    "last_historical_data"
-  ],
   "values": [
     [
       1,
@@ -36,6 +24,5 @@
       "2015-08-07T14:49:30.000Z",
       "2023-03-04T17:19:00.000Z"
     ]
-  ],
-  "batch": "1677951011535"
+  ]
 }

@@ -20,7 +20,7 @@
       1,
       1,
       1,
-      [],
+      "ops",
       "2013-04-28T18:47:21.000Z",
       "2023-03-04T17:19:00.000Z"
     ],
@@ -32,21 +32,7 @@
       1,
       1,
       2,
-      [
-        "0x2170ed0880ac9a755fd29b2688956bd959f933f8",
-        "0x64ff637fb478863b7468bc97d30a5bf3a428a1fd",
-        "0xf20d962a6c8f70c731bd838a3a388d7d48fa6e15",
-        "0x2eaa73bd0db20c64f53febea7b5f5e5bccc7fb8b",
-        "0x0200070000000000000000000000000000000000000000000000000000000000",
-        "0x1D931Bf8656d795E50eF6D639562C5bD8Ac2B78f",
-        "0x85219708c49aa701871ad330a94ea0f41dff24ca",
-        "2FPyTwcZLUg1MDrwsyoP4D6s1tM7hAkHYRjkNb5w6Pxk",
-        "0x34d21b1e550d73cee41151c77f3c73359527a396",
-        "aurora",
-        "KT19at7rQUvyjxnZ2fBv7D9zc8rkyG7gAoU8",
-        "0x34a9c05b638020a07bb153bf624c8763bf8b4a86",
-        "0xeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee"
-      ],
+      "ops",
       "2015-08-07T14:49:30.000Z",
       "2023-03-04T17:19:00.000Z"
     ]

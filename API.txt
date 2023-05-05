@@ -1,0 +1,13 @@
+
+
+https://api-gravity.coinmarketcap.com/gravity/v3/gravity/global-trendingV2?topicLimit=5&tokenLimit=5
+
+https://api.coinmarketcap.com/aggr/v3/web/global-data
+
+
+
+https://coinmarketcap.com/all/views/all/
+https://api.coinmarketcap.com/data-api/v3/cryptocurrency/quote/latest?id=1,1027&convertId=2781
+https://coinmarketcap.com/currencies/volume/monthly/
+https://coinmarketcap.com/tokens/
+https://coinmarketcap.com/trending-cryptocurrencies/

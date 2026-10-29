@@ -54,11 +54,14 @@ export function StatsRow({
   coins,
   labels,
   className,
+  onCoinsClick,
 }: {
   stats: CarStats;
   coins: number;
   labels: { coins: string; topSpeed: string; armor: string; kmh: string };
   className?: string;
+  /** when set, the coin cell becomes a button that opens the coin shop */
+  onCoinsClick?: () => void;
 }) {
   const animatedCoins = useAnimatedNumber(coins);
   const { isPulsing } = useCoinFly();
@@ -72,6 +75,8 @@ export function StatsRow({
       color: "text-amber-400",
       label: labels.coins,
       pulsing: isPulsing,
+      onClick: onCoinsClick,
+      plus: !!onCoinsClick,
     },
     {
       id: "stat-speed",
@@ -81,6 +86,8 @@ export function StatsRow({
       color: "text-mint-400",
       label: labels.topSpeed,
       pulsing: false,
+      onClick: undefined,
+      plus: false,
     },
     {
       id: "stat-armor",
@@ -90,29 +97,53 @@ export function StatsRow({
       color: "text-skyg-300",
       label: labels.armor,
       pulsing: false,
+      onClick: undefined,
+      plus: false,
     },
   ];
   return (
     <div className={cn("flex items-stretch justify-between gap-[8px]", className)} dir="ltr">
-      {items.map((it, i) => (
-        <div
-          key={i}
-          id={it.id}
-          className={cn(
-            "flex flex-1 items-center gap-[8px] rounded-[14px] border-[3px] border-ink bg-navy-950/75 px-[10px] py-[6px] shadow-[inset_0_2px_0_rgba(255,255,255,0.06)] transition-all duration-300",
-            it.pulsing && "scale-[1.06] ring-[3px] ring-amber-400 shadow-[0_0_18px_rgba(255,210,58,0.7)]",
-          )}
-        >
-          <span className={cn("shrink-0 drop-shadow-[0_2px_0_rgba(0,0,0,0.35)]", it.color)}>{it.icon}</span>
-          <div className="min-w-0">
-            <div className="truncate font-body text-[9px] font-black tracking-wider text-white/50">{it.label}</div>
-            <div className="flex items-baseline gap-[3px]">
-              <span className="truncate font-display text-[20px] leading-none text-white t-stroke sw-2">{it.value}</span>
-              {it.suffix && <span className="font-body text-[9px] font-black text-white/45">{it.suffix}</span>}
+      {items.map((it, i) => {
+        const cell = (
+          <>
+            <span className={cn("shrink-0 drop-shadow-[0_2px_0_rgba(0,0,0,0.35)]", it.color)}>{it.icon}</span>
+            <div className="min-w-0 flex-1 text-start">
+              <div className="truncate font-body text-[9px] font-black tracking-wider text-white/50">{it.label}</div>
+              <div className="flex items-baseline gap-[3px]">
+                <span className="truncate font-display text-[20px] leading-none text-white t-stroke sw-2">{it.value}</span>
+                {it.suffix && <span className="font-body text-[9px] font-black text-white/45">{it.suffix}</span>}
+              </div>
             </div>
+            {it.plus && (
+              <span className="flex h-[20px] w-[20px] shrink-0 items-center justify-center rounded-full border-[2px] border-ink bg-gradient-to-b from-[#9ef05a] to-[#3d9a1f] text-[13px] font-black leading-none text-white shadow-[0_2px_0_#1f5a10]">
+                +
+              </span>
+            )}
+          </>
+        );
+        const cls = cn(
+          "flex flex-1 items-center gap-[8px] rounded-[14px] border-[3px] border-ink bg-navy-950/75 px-[10px] py-[6px] shadow-[inset_0_2px_0_rgba(255,255,255,0.06)] transition-all duration-300",
+          it.pulsing && "scale-[1.06] ring-[3px] ring-amber-400 shadow-[0_0_18px_rgba(255,210,58,0.7)]",
+        );
+        if (it.onClick) {
+          return (
+            <button
+              key={i}
+              id={it.id}
+              type="button"
+              onClick={it.onClick}
+              className={cn(cls, "hover:brightness-125 active:translate-y-[1px]")}
+            >
+              {cell}
+            </button>
+          );
+        }
+        return (
+          <div key={i} id={it.id} className={cls}>
+            {cell}
           </div>
-        </div>
-      ))}
+        );
+      })}
     </div>
   );
 }

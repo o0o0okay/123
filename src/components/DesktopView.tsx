@@ -63,6 +63,8 @@ export interface DesktopViewProps {
   onPrev: () => void;
   onNext: () => void;
   onOpenDealer: () => void;
+  /** opens the coin shop (buy coins with SOL) */
+  onOpenCoinShop: () => void;
   onEquip: (car: Car) => void;
 
   screen: "login" | "loading" | "home";
@@ -170,8 +172,8 @@ function TopBar(p: DesktopViewProps) {
         <button
           type="button"
           id="desktop-top-coin-badge"
-          onClick={p.onOpenDealer}
-          title={t.dealership}
+          onClick={p.onOpenCoinShop}
+          title={t.coinShop}
           className={cn(
             "me-[2px] flex items-center gap-[8px] rounded-full border-[3px] border-ink bg-navy-950/80 py-[4px] pe-[6px] ps-[14px] font-body text-[13px] font-black text-amber-400 transition-all duration-300 hover:brightness-125",
             isPulsing && "scale-[1.12] ring-[4px] ring-amber-400 shadow-[0_0_24px_rgba(255,210,58,0.85)] bg-navy-900",
@@ -539,6 +541,7 @@ export function DesktopView(p: DesktopViewProps) {
               stats={viewStats}
               coins={p.garage.coins}
               className="px-[4px]"
+              onCoinsClick={p.onOpenCoinShop}
               labels={{ coins: t.coins, topSpeed: t.topSpeed, armor: t.armor, kmh: t.kmh }}
             />
           </div>

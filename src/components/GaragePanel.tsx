@@ -263,7 +263,7 @@ export function GaragePanel({
       )}
 
       {/* paint shop */}
-      <PaintRow t={t} lang={lang} paintId={paintId} onOpen={onOpenPaint} />
+      <PaintRow t={t} lang={lang} carId={car.id} paintId={paintId} onOpen={onOpenPaint} />
 
       {/* upgrade rows */}
       <div className="no-scrollbar min-h-0 flex-1 space-y-[8px] overflow-y-auto pe-[2px]">

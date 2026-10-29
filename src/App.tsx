@@ -890,6 +890,7 @@ function AppContent({
           activeId={activeCar.id}
           coins={coins}
           sellValueOf={sellValueOf}
+          statsOf={(c) => carStats(c, levelsOf(playerState, c.id))}
           onBuy={requestBuy}
           onSell={requestSell}
           onEquip={equip}

@@ -9,8 +9,8 @@ import { FloatingPanel, GameButton, Modal } from "./ui";
 export interface ShopProps {
   cars: Car[];
   owned: string[];
+  /** car currently driven (only owned cars can reach the home stage) */
   activeId: string;
-  viewId: string;
   coins: number;
   onBuy: (car: Car) => void;
   onEquip: (car: Car) => void;
@@ -97,7 +97,7 @@ function ShopCard({
       <div className="flex items-center gap-[10px]">
         <button
           type="button"
-          onClick={() => onPreview(car)}
+          onClick={() => (owned ? onPreview(car) : onBuy(car))}
           aria-label={car.name}
           className="relative flex h-[66px] w-[108px] shrink-0 items-center justify-center rounded-[12px] border-[2px] border-ink bg-[radial-gradient(ellipse_at_center,#2f5fc4,#14204f_75%)] transition-transform hover:scale-[1.03]"
         >
@@ -239,7 +239,6 @@ export function ShopPanel({
   cars,
   owned,
   activeId,
-  viewId,
   coins,
   onBuy,
   onEquip,
@@ -303,7 +302,7 @@ export function ShopPanel({
             car={car}
             owned={owned.includes(car.id)}
             active={activeId === car.id}
-            viewing={viewId === car.id}
+            viewing={activeId === car.id}
             coins={coins}
             onBuy={onBuy}
             onEquip={onEquip}

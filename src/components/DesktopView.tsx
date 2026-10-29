@@ -1,6 +1,6 @@
 import { useState, type MouseEvent, type ReactNode } from "react";
 import { cn } from "@/utils/cn";
-import { cars, carStats, type Car, type CarStats } from "@/data/cars";
+import { carStats, type Car, type CarStats } from "@/data/cars";
 import type { Lang, Strings } from "@/i18n";
 import type { Settings } from "@/settings";
 import { useAnimatedNumber, useFullscreen } from "@/hooks";
@@ -16,7 +16,6 @@ import {
   CrosshairIcon,
   FullscreenIcon,
   GearIcon,
-  LockIcon,
   PhantomIcon,
   PoliceLightIcon,
   SolanaIcon,
@@ -46,10 +45,10 @@ export interface DesktopViewProps {
   lang: Lang;
   settings: Settings;
 
-  /** car shown in the showcase (may be locked) */
+  /** car currently driven — the home stage only shows owned cars */
   viewCar: Car;
   viewStats: CarStats;
-  viewOwned: boolean;
+  /** position of the driven car inside the owned-cars roster */
   viewIdx: number;
   garage: GarageData;
   shop: ShopProps;
@@ -62,7 +61,6 @@ export interface DesktopViewProps {
   onPrev: () => void;
   onNext: () => void;
   onOpenShop: () => void;
-  onOpenGarage: () => void;
   onOpenDealer: () => void;
   onEquip: (car: Car) => void;
 
@@ -407,53 +405,43 @@ function DriverPanel(p: DesktopViewProps) {
   );
 }
 
-/* ---------------- Car Roster (all cars, locked ones marked) ---------------- */
+/* ---------------- Car Roster (owned cars only) ---------------- */
 function Roster({
+  cars: ownedCars,
   viewIdx,
-  owned,
   onSelect,
 }: {
+  cars: Car[];
   viewIdx: number;
-  owned: string[];
   onSelect: (i: number) => void;
 }) {
   return (
     <div className="no-scrollbar absolute inset-x-[44px] top-0 z-10 overflow-x-auto" dir="ltr">
       <div className="mx-auto flex w-max gap-[10px] px-[6px] pb-[6px] pt-[4px]">
-      {[...cars.keys()]
-        .sort((a, b) => Number(!owned.includes(cars[a].id)) - Number(!owned.includes(cars[b].id)))
-        .map((i) => {
-        const c = cars[i];
-        const active = i === viewIdx;
-        const locked = !owned.includes(c.id);
-        return (
-          <button
-            key={c.id}
-            type="button"
-            aria-label={`${c.cls} ${c.name}`}
-            title={`${c.cls} ${c.name}`}
-            onClick={() => onSelect(i)}
-            className={cn(
-              "relative h-[52px] w-[52px] rounded-full border-[3px] transition-all",
-              active
-                ? "scale-110 border-white shadow-[0_0_0_3px_rgba(111,193,255,0.55),0_4px_0_#0a1038]"
-                : "border-[#3a4f9a] opacity-75 shadow-[0_4px_0_#0a1038] hover:scale-105 hover:opacity-100",
-            )}
-          >
-            <CarFace car={c} size={46} className={locked ? "brightness-50 saturate-50" : ""} />
-            {locked ? (
-              <span className="absolute -bottom-[3px] -right-[3px] flex h-[20px] w-[20px] items-center justify-center rounded-full border-[2px] border-ink bg-navy-800 text-amber-400">
-                <LockIcon width={11} height={11} />
-              </span>
-            ) : (
+        {ownedCars.map((c, i) => {
+          const active = i === viewIdx;
+          return (
+            <button
+              key={c.id}
+              type="button"
+              aria-label={`${c.cls} ${c.name}`}
+              title={`${c.cls} ${c.name}`}
+              onClick={() => onSelect(i)}
+              className={cn(
+                "relative h-[52px] w-[52px] rounded-full border-[3px] transition-all",
+                active
+                  ? "scale-110 border-white shadow-[0_0_0_3px_rgba(111,193,255,0.55),0_4px_0_#0a1038]"
+                  : "border-[#3a4f9a] opacity-75 shadow-[0_4px_0_#0a1038] hover:scale-105 hover:opacity-100",
+              )}
+            >
+              <CarFace car={c} size={46} />
               <span
                 className="absolute -bottom-[2px] -right-[2px] h-[15px] w-[15px] rounded-full border-[2.5px] border-ink"
                 style={{ background: c.rarityColor }}
               />
-            )}
-          </button>
-        );
-      })}
+            </button>
+          );
+        })}
       </div>
     </div>
   );
@@ -530,10 +518,6 @@ export function DesktopView(p: DesktopViewProps) {
               tag={viewCar.rarity}
               tagColor={viewCar.rarityColor}
               accent={viewCar.accent}
-              icon={p.viewOwned ? <GearIcon width={30} height={30} /> : <CartIcon width={28} height={28} />}
-              iconTone={p.viewOwned ? "garage" : "shop"}
-              iconLabel={p.viewOwned ? t.garage : t.tabShop}
-              onIconClick={p.viewOwned ? p.onOpenGarage : p.onOpenShop}
             />
           </div>
 
@@ -543,11 +527,9 @@ export function DesktopView(p: DesktopViewProps) {
               car={viewCar}
               onPrev={p.onPrev}
               onNext={p.onNext}
-              locked={!p.viewOwned}
-              onBuy={() => p.shop.onBuy(viewCar)}
-              labels={{ locked: t.locked, buy: t.buy }}
+              hasMultiple={p.ownedCars.length > 1}
             />
-            <Roster viewIdx={p.viewIdx} owned={p.shop.owned} onSelect={p.onSelectCar} />
+            <Roster cars={p.ownedCars} viewIdx={p.viewIdx} onSelect={p.onSelectCar} />
           </div>
 
           <div className="w-full shrink-0 space-y-[10px] pt-[4px]">

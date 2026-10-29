@@ -72,8 +72,6 @@ function AppContent({
   const [toast, setToast] = useState<ToastData | null>(null);
   const [player, setPlayer] = useState<Player | null>(null);
   const [playerState, setPlayerState] = useState<PlayerState>(loadPlayer);
-  /** car shown in the showcase — may be a locked (not yet bought) car */
-  const [viewId, setViewId] = useState<string>(() => playerState.activeCarId);
   /** car waiting for purchase confirmation */
   const [buyTarget, setBuyTarget] = useState<Car | null>(null);
   /** dealership overlay + car waiting for sale confirmation */
@@ -97,15 +95,12 @@ function AppContent({
   const ownedCars = cars.filter((c) => owned.includes(c.id));
   const coins = playerState.coins;
 
-  // driven car (always owned) -> garage
+  // driven car (always owned) -> showcase / banner / stat rows / garage
   const activeCar = cars.find((c) => c.id === playerState.activeCarId) ?? ownedCars[0] ?? cars[0];
   const activeLevels = levelsOf(playerState, activeCar.id);
-
-  // browsed car -> showcase / banner / stat rows
-  const viewIdx = Math.max(0, cars.findIndex((c) => c.id === viewId));
-  const viewCar = cars[viewIdx];
-  const viewOwned = owned.includes(viewCar.id);
-  const viewStats = carStats(viewCar, viewOwned ? levelsOf(playerState, viewCar.id) : ZERO_LEVELS);
+  const activeStats = carStats(activeCar, activeLevels);
+  /** position of the driven car inside the owned-cars carousel */
+  const activeIdx = Math.max(0, ownedCars.findIndex((c) => c.id === activeCar.id));
 
   // missions: stored metrics + values derived from the garage
   const maxOwnedSpeed = Math.max(
@@ -156,22 +151,24 @@ function AppContent({
     document.title = lang === "fa" ? "هیت چیس — فرار از پلیس" : "Heat Chase — Police Escape";
   }, [lang]);
 
-  /* ---------------- browsing cars ---------------- */
-  const viewCarAt = (i: number) => {
-    const c = cars[i];
-    setViewId(c.id);
-    if (owned.includes(c.id)) setPlayerState((p) => ({ ...p, activeCarId: c.id }));
+  /* ---------------- browsing the owned cars ---------------- */
+  /** the home stage only ever shows cars the player owns */
+  const showCar = (car: Car) => {
+    if (!owned.includes(car.id)) return;
+    setPlayerState((p) => (p.activeCarId === car.id ? p : { ...p, activeCarId: car.id }));
   };
 
   const changeCar = (dir: 1 | -1) => {
+    if (ownedCars.length < 2) return;
     sfx("swoosh");
-    viewCarAt((viewIdx + dir + cars.length) % cars.length);
+    showCar(ownedCars[(activeIdx + dir + ownedCars.length) % ownedCars.length]);
   };
 
   const selectCar = (i: number) => {
-    if (i === viewIdx) return;
+    const car = ownedCars[i];
+    if (!car || car.id === activeCar.id) return;
     sfx("swoosh");
-    viewCarAt(i);
+    showCar(car);
   };
 
   /** advance a mission metric */
@@ -208,7 +205,6 @@ function AppContent({
       activeCarId: car.id,
       upgrades: { ...p.upgrades, [car.id]: p.upgrades[car.id] ?? { ...ZERO_LEVELS } },
     }));
-    setViewId(car.id);
     setBuyTarget(null);
     bumpTask("buy");
     showToast(fmt(t.purchased, { n: car.name }), "success");
@@ -218,14 +214,14 @@ function AppContent({
     if (!owned.includes(car.id)) return;
     sfx("click");
     setPlayerState((p) => ({ ...p, activeCarId: car.id }));
-    setViewId(car.id);
     showToast(fmt(t.carSelected, { n: car.name }), "success");
   };
 
+  /** shop: bring an owned car to the home stage */
   const preview = (car: Car) => {
+    if (!owned.includes(car.id)) return;
     sfx("swoosh");
-    setViewId(car.id);
-    if (owned.includes(car.id)) setPlayerState((p) => ({ ...p, activeCarId: car.id }));
+    showCar(car);
     if (!isDesktop) setTab("cars");
   };
 
@@ -234,15 +230,6 @@ function AppContent({
     if (isDesktop) setRightTab("shop");
     else setTab("shop");
   };
-
-  const openGarage = () => {
-    sfx("click");
-    if (isDesktop) setRightTab("garage");
-    else setTab("garage");
-  };
-
-  /** Banner round button: owned car -> garage, locked car -> shop. */
-  const openBannerAction = () => (viewOwned ? openGarage() : openShop());
 
   /* ---------------- dealership: buy & sell ---------------- */
   const openDealer = () => {
@@ -459,8 +446,6 @@ function AppContent({
   };
 
   /* ---------------- racing ---------------- */
-  const activeStats = carStats(activeCar, activeLevels);
-
   const startRace = (mode: RaceMode) => {
     if (raceMode) return;
     if (coins < mode.fee) {
@@ -633,7 +618,6 @@ function AppContent({
     cars,
     owned,
     activeId: activeCar.id,
-    viewId: viewCar.id,
     coins,
     onBuy: requestBuy,
     onEquip: equip,
@@ -658,15 +642,11 @@ function AppContent({
   const mobileLogin = (
     <div className="flex h-full flex-col">
       <TitleBanner
-        small={viewCar.cls}
-        big={viewCar.name}
-        tag={viewCar.rarity}
-        tagColor={viewCar.rarityColor}
-        accent={viewCar.accent}
-        icon={viewOwned ? <GearIcon width={30} height={30} /> : <CartIcon width={28} height={28} />}
-        iconTone={viewOwned ? "garage" : "shop"}
-        iconLabel={viewOwned ? t.garage : t.tabShop}
-        onIconClick={openBannerAction}
+        small={activeCar.cls}
+        big={activeCar.name}
+        tag={activeCar.rarity}
+        tagColor={activeCar.rarityColor}
+        accent={activeCar.accent}
       />
 
       <main className="relative min-h-0 flex-1">
@@ -674,12 +654,10 @@ function AppContent({
         {tab === "cars" && (
           <>
             <CarShowcase
-              car={viewCar}
+              car={activeCar}
               onPrev={() => changeCar(-1)}
               onNext={() => changeCar(1)}
-              locked={!viewOwned}
-              onBuy={() => requestBuy(viewCar)}
-              labels={{ locked: t.locked, buy: t.buy }}
+              hasMultiple={ownedCars.length > 1}
             />
             <div className="pointer-events-none absolute inset-0" dir="ltr">
               <SlotButton
@@ -718,9 +696,9 @@ function AppContent({
 
       {/* power / tier + coins, top speed, body */}
       <section className="shrink-0 space-y-[8px] px-[24px] pt-[2px]">
-        <StatPills stats={viewStats} tier={viewCar.tier} powerLabel={t.power} lvLabel={t.lv} />
+        <StatPills stats={activeStats} tier={activeCar.tier} powerLabel={t.power} lvLabel={t.lv} />
         <StatsRow
-          stats={viewStats}
+          stats={activeStats}
           coins={coins}
           labels={{ coins: t.coins, topSpeed: t.topSpeed, armor: t.armor, kmh: t.kmh }}
         />
@@ -799,10 +777,9 @@ function AppContent({
           t={t}
           lang={lang}
           settings={settings}
-          viewCar={viewCar}
-          viewStats={viewStats}
-          viewOwned={viewOwned}
-          viewIdx={viewIdx}
+          viewCar={activeCar}
+          viewStats={activeStats}
+          viewIdx={activeIdx}
           garage={garage}
           shop={shop}
           ownedCars={ownedCars}
@@ -814,7 +791,6 @@ function AppContent({
           onPrev={() => changeCar(-1)}
           onNext={() => changeCar(1)}
           onOpenShop={openShop}
-          onOpenGarage={openGarage}
           onOpenDealer={openDealer}
           onEquip={equip}
           screen={screen}
@@ -845,9 +821,8 @@ function AppContent({
         <WelcomeScreen
           t={t}
           lang={lang}
-          viewCar={viewCar}
-          viewStats={viewStats}
-          viewOwned={viewOwned}
+          viewCar={activeCar}
+          viewStats={activeStats}
           garage={garage}
           shop={shop}
           ownedCars={ownedCars}
@@ -861,8 +836,6 @@ function AppContent({
           onTab={onTab}
           onPrev={() => changeCar(-1)}
           onNext={() => changeCar(1)}
-          onOpenShop={openShop}
-          onOpenGarage={openGarage}
           onOpenDealer={openDealer}
           onEquip={equip}
           onStartChase={startChase}

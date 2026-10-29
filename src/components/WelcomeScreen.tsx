@@ -1,7 +1,7 @@
 import { useState } from "react";
 import type { Car, CarStats } from "@/data/cars";
 import type { Lang, Strings } from "@/i18n";
-import { ArrowRightIcon, CartIcon, CopyIcon, CrosshairIcon, GearIcon, PlayIcon, SolanaIcon, UndoIcon } from "@/icons";
+import { ArrowRightIcon, CopyIcon, CrosshairIcon, PlayIcon, SolanaIcon, UndoIcon } from "@/icons";
 import { shortenAddress } from "@/solana";
 import { TitleBanner } from "./TitleBanner";
 import { CarShowcase } from "./CarShowcase";
@@ -28,10 +28,9 @@ import type { MouseEvent } from "react";
 interface Props {
   t: Strings;
   lang: Lang;
-  /** car currently shown in the showcase (may be locked) */
+  /** car currently driven — the home stage only shows owned cars */
   viewCar: Car;
   viewStats: CarStats;
-  viewOwned: boolean;
   garage: GarageData;
   shop: ShopProps;
   ownedCars: Car[];
@@ -45,8 +44,6 @@ interface Props {
   onTab: (t: TabKey) => void;
   onPrev: () => void;
   onNext: () => void;
-  onOpenShop: () => void;
-  onOpenGarage: () => void;
   onOpenDealer: () => void;
   onEquip: (car: Car) => void;
   onStartChase: () => void;
@@ -60,7 +57,6 @@ export function WelcomeScreen({
   lang,
   viewCar,
   viewStats,
-  viewOwned,
   garage,
   shop,
   ownedCars,
@@ -74,8 +70,6 @@ export function WelcomeScreen({
   onTab,
   onPrev,
   onNext,
-  onOpenShop,
-  onOpenGarage,
   onOpenDealer,
   onEquip,
   onStartChase,
@@ -104,23 +98,12 @@ export function WelcomeScreen({
         tag={viewCar.rarity}
         tagColor={viewCar.rarityColor}
         accent={viewCar.accent}
-        icon={viewOwned ? <GearIcon width={30} height={30} /> : <CartIcon width={28} height={28} />}
-        iconTone={viewOwned ? "garage" : "shop"}
-        iconLabel={viewOwned ? t.garage : t.tabShop}
-        onIconClick={viewOwned ? onOpenGarage : onOpenShop}
       />
 
       <main className="relative min-h-0 flex-1">
         <DealerRail label={t.dealership} onClick={onOpenDealer} className="top-1/2 -translate-y-1/2" />
         {tab === "cars" && (
-          <CarShowcase
-            car={viewCar}
-            onPrev={onPrev}
-            onNext={onNext}
-            locked={!viewOwned}
-            onBuy={() => shop.onBuy(viewCar)}
-            labels={{ locked: t.locked, buy: t.buy }}
-          />
+          <CarShowcase car={viewCar} onPrev={onPrev} onNext={onNext} hasMultiple={ownedCars.length > 1} />
         )}
         {tab === "race" && <RaceView t={t} lang={lang} race={race} />}
         {tab === "shop" && <ShopView t={t} lang={lang} shop={shop} />}

@@ -13,7 +13,7 @@ import { NewsPanel } from "./NewsPanel";
 import { StatPills, StatsRow } from "./Stats";
 import { BottomBar, type TabKey } from "./BottomBar";
 import { GameButton } from "./ui";
-import { DealerRail } from "./Dealership";
+import { DealerRail } from "./DealerBits";
 
 export interface Player {
   name: string;

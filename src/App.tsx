@@ -11,8 +11,6 @@ import { StatPills, StatsRow } from "./components/Stats";
 import { BottomBar, type TabKey } from "./components/BottomBar";
 import { WelcomeScreen, type Player } from "./components/WelcomeScreen";
 import { DesktopView, type RightTab } from "./components/DesktopView";
-import { WalletModal } from "./components/WalletModal";
-import { CoinShop } from "./components/CoinShop";
 import { ExitDialog, LoadingOverlay, OptionsModal, Toast, type ToastData, type ToastType } from "./components/Overlays";
 import { GameButton, SlotButton } from "./components/ui";
 import { CoinFlyProvider, useCoinFly } from "./components/CoinFlyEffect";
@@ -28,8 +26,8 @@ import type { CoinPack } from "./data/coinPacks";
 import { claimDaily, DEFAULT_DAILY, resolveDaily } from "./data/daily";
 import { TasksView, type TaskView } from "./components/TasksPanel";
 import { RaceView, type RaceProps } from "./components/RacePanel";
-import { RaceOverlay } from "./components/RaceOverlay";
-import { DealerRail, Dealership, SellConfirmModal } from "./components/Dealership";
+import { DealerRail, SellConfirmModal } from "./components/DealerBits";
+import { LazyCoinShop, LazyDealership, LazyGate, LazyRaceOverlay, LazyWalletModal, preloadPanels } from "./components/lazy";
 import { simulateRace, type RaceMode, type RaceResult } from "./data/races";
 import {
   BackpackIcon,
@@ -149,6 +147,11 @@ function AppContent({
   useEffect(() => {
     savePlayer(playerState);
   }, [playerState]);
+
+  /* Warm the on-demand panels (dealership, coin shop, race overlay) while idle */
+  useEffect(() => {
+    preloadPanels();
+  }, []);
 
   /* Detect wallets + auto-reconnect */
   useEffect(() => {
@@ -960,49 +963,55 @@ function AppContent({
 
       {/* race overlay */}
       {raceMode && (
-        <RaceOverlay
-          t={t}
-          lang={lang}
-          mode={raceMode}
-          car={activeCar}
-          result={raceResult}
-          onCollect={collectRacePrize}
-          onAgain={raceAgain}
-          onClose={closeRace}
-          onStageTick={() => sfx("swoosh")}
-        />
+        <LazyGate resetKey={raceMode?.id}>
+          <LazyRaceOverlay
+            t={t}
+            lang={lang}
+            mode={raceMode}
+            car={activeCar}
+            result={raceResult}
+            onCollect={collectRacePrize}
+            onAgain={raceAgain}
+            onClose={closeRace}
+            onStageTick={() => sfx("swoosh")}
+          />
+        </LazyGate>
       )}
 
       {/* dealership: buy & sell with search / sort / filter sidebar */}
       {dealerOpen && (
-        <Dealership
-          t={t}
-          lang={lang}
-          layout={isDesktop ? "desktop" : "mobile"}
-          cars={cars}
-          owned={owned}
-          activeId={activeCar.id}
-          coins={coins}
-          sellValueOf={sellValueOf}
-          statsOf={(c) => carStats(c, levelsOf(playerState, c.id))}
-          onBuy={requestBuy}
-          onSell={requestSell}
-          onEquip={equip}
-          onClose={closeDealer}
-          onSfx={(n) => sfx(n)}
-        />
+        <LazyGate resetKey={dealerOpen}>
+          <LazyDealership
+            t={t}
+            lang={lang}
+            layout={isDesktop ? "desktop" : "mobile"}
+            cars={cars}
+            owned={owned}
+            activeId={activeCar.id}
+            coins={coins}
+            sellValueOf={sellValueOf}
+            statsOf={(c) => carStats(c, levelsOf(playerState, c.id))}
+            onBuy={requestBuy}
+            onSell={requestSell}
+            onEquip={equip}
+            onClose={closeDealer}
+            onSfx={(n) => sfx(n)}
+          />
+        </LazyGate>
       )}
 
       {/* coin shop: packs + Solana checkout */}
       {coinShopOpen && (
-        <CoinShop
-          t={t}
-          coins={coins}
-          walletAddress={player && player.provider !== "Demo Wallet" ? player.walletAddress : undefined}
-          wide={isDesktop}
-          onPurchase={purchasePack}
-          onClose={closeCoinShop}
-        />
+        <LazyGate resetKey={coinShopOpen}>
+          <LazyCoinShop
+            t={t}
+            coins={coins}
+            walletAddress={player && player.provider !== "Demo Wallet" ? player.walletAddress : undefined}
+            wide={isDesktop}
+            onPurchase={purchasePack}
+            onClose={closeCoinShop}
+          />
+        </LazyGate>
       )}
 
       {/* purchase confirmation */}
@@ -1053,15 +1062,17 @@ function AppContent({
 
       {/* wallet modal */}
       {walletModalOpen && (
-        <WalletModal
-          t={t}
-          wallets={wallets}
-          connecting={connecting}
-          selectedWallet={selectedWallet}
-          onSelect={(w) => void handleConnectWallet(w)}
-          onDemoConnect={handleDemoWallet}
-          onClose={() => setWalletModalOpen(false)}
-        />
+        <LazyGate resetKey={walletModalOpen}>
+          <LazyWalletModal
+            t={t}
+            wallets={wallets}
+            connecting={connecting}
+            selectedWallet={selectedWallet}
+            onSelect={(w) => void handleConnectWallet(w)}
+            onDemoConnect={handleDemoWallet}
+            onClose={() => setWalletModalOpen(false)}
+          />
+        </LazyGate>
       )}
 
       {/* overlays */}

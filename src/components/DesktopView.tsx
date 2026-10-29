@@ -35,7 +35,7 @@ import { NewsPanel } from "./NewsPanel";
 import { StatPills, StatsRow } from "./Stats";
 import { CarFace } from "./BottomBar";
 import { SlotButton } from "./ui";
-import { DealerRail } from "./Dealership";
+import { DealerRail } from "./DealerBits";
 import type { Player } from "./WelcomeScreen";
 
 export type RightTab = "race" | "garage" | "tasks" | "news";

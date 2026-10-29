@@ -29,8 +29,6 @@ const en = {
   /* ---------- tabs / nav ---------- */
   tabCars: "CARS",
   garage: "GARAGE",
-  tabShop: "SHOP",
-  shopTitle: "CAR SHOP",
   dealership: "DEALERSHIP",
   dealerSub: "Buy & sell · search · sort",
   allBrands: "ALL BRANDS",
@@ -252,8 +250,6 @@ const fa: Strings = {
 
   tabCars: "ماشین‌ها",
   garage: "گاراژ",
-  tabShop: "فروشگاه",
-  shopTitle: "فروشگاه ماشین",
   dealership: "نمایشگاه خودرو",
   dealerSub: "خرید و فروش · جستجو · مرتب‌سازی",
   allBrands: "همه برندها",

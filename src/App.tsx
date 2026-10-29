@@ -3,7 +3,7 @@ import { GameCanvas } from "./components/GameCanvas";
 import { TitleBanner } from "./components/TitleBanner";
 import { CarShowcase } from "./components/CarShowcase";
 import { GarageView, type GarageData } from "./components/GaragePanel";
-import { BuyConfirmModal, ShopView, type ShopProps } from "./components/ShopPanel";
+import { BuyConfirmModal } from "./components/BuyConfirmModal";
 import { NewsPanel } from "./components/NewsPanel";
 import { StatPills, StatsRow } from "./components/Stats";
 import { BottomBar, type TabKey } from "./components/BottomBar";
@@ -25,7 +25,16 @@ import { RaceView, type RaceProps } from "./components/RacePanel";
 import { RaceOverlay } from "./components/RaceOverlay";
 import { DealerRail, Dealership, SellConfirmModal } from "./components/Dealership";
 import { simulateRace, type RaceMode, type RaceResult } from "./data/races";
-import { BackpackIcon, CartIcon, GearIcon, PhantomIcon, PlayIcon, SolanaIcon, SolflareIcon, WalletIcon } from "./icons";
+import {
+  BackpackIcon,
+  GearIcon,
+  PhantomIcon,
+  PlayIcon,
+  SolanaIcon,
+  SolflareIcon,
+  StoreIcon,
+  WalletIcon,
+} from "./icons";
 
 type Screen = "login" | "loading" | "home";
 
@@ -178,7 +187,7 @@ function AppContent({
       taskProgress: { ...p.taskProgress, [metric]: (p.taskProgress[metric] ?? 0) + by },
     }));
 
-  /* ---------------- shop: buy / equip / preview ---------------- */
+  /* ---------------- buying / equipping cars ---------------- */
   const requestBuy = (car: Car) => {
     if (owned.includes(car.id)) return;
     if (coins < car.price) {
@@ -215,20 +224,6 @@ function AppContent({
     sfx("click");
     setPlayerState((p) => ({ ...p, activeCarId: car.id }));
     showToast(fmt(t.carSelected, { n: car.name }), "success");
-  };
-
-  /** shop: bring an owned car to the home stage */
-  const preview = (car: Car) => {
-    if (!owned.includes(car.id)) return;
-    sfx("swoosh");
-    showCar(car);
-    if (!isDesktop) setTab("cars");
-  };
-
-  const openShop = () => {
-    sfx("click");
-    if (isDesktop) setRightTab("shop");
-    else setTab("shop");
   };
 
   /* ---------------- dealership: buy & sell ---------------- */
@@ -310,7 +305,7 @@ function AppContent({
     sfx("coinJingle");
     const gained = playerState.runReward;
 
-    // Trigger flying coins straight to top shop/coin counter
+    // Trigger flying coins straight to the top coin counter
     triggerCoinFly({
       startEl: e?.currentTarget,
       startX: e?.clientX,
@@ -614,17 +609,6 @@ function AppContent({
     onCollect: collectReward,
   };
 
-  const shop: ShopProps = {
-    cars,
-    owned,
-    activeId: activeCar.id,
-    coins,
-    onBuy: requestBuy,
-    onEquip: equip,
-    onPreview: preview,
-    onOpenDealer: openDealer,
-  };
-
   const race: RaceProps = {
     stats: activeStats,
     coins,
@@ -688,7 +672,6 @@ function AppContent({
           </>
         )}
         {tab === "race" && <RaceView t={t} lang={lang} race={race} />}
-        {tab === "shop" && <ShopView t={t} lang={lang} shop={shop} />}
         {tab === "garage" && <GarageView t={t} garage={garage} ownedCars={ownedCars} onEquip={equip} />}
         {tab === "tasks" && <TasksView t={t} lang={lang} tasks={tasks} coins={coins} onClaim={claimTask} />}
         {tab === "news" && <NewsPanel items={t.news} title={t.tabNews} />}
@@ -716,12 +699,12 @@ function AppContent({
         </div>
       </section>
 
-      {/* actions: SHOP · CONNECT · OPTIONS */}
+      {/* actions: DEALERSHIP · CONNECT · OPTIONS */}
       <section className="flex shrink-0 items-end justify-center gap-[12px] px-[18px] pb-[12px] pt-[12px]">
-        <GameButton variant="green" className="h-[68px] w-[126px]" onClick={openShop}>
-          <span className="flex flex-col items-center gap-[2px] font-display text-[15px] leading-none tracking-wide text-white t-stroke sw-3">
-            <CartIcon width={22} height={22} />
-            {t.tabShop}
+        <GameButton variant="green" className="h-[68px] w-[134px]" onClick={openDealer}>
+          <span className="flex flex-col items-center gap-[2px] whitespace-nowrap font-display text-[13px] leading-none tracking-wide text-white t-stroke sw-3">
+            <StoreIcon width={22} height={22} />
+            {t.dealership}
           </span>
         </GameButton>
 
@@ -757,7 +740,7 @@ function AppContent({
           sfx("click");
           setExitOpen(true);
         }}
-        labels={{ cars: t.tabCars, race: t.tabRace, shop: t.tabShop, garage: t.garage, tasks: t.tabTasks, news: t.tabNews }}
+        labels={{ cars: t.tabCars, race: t.tabRace, garage: t.garage, tasks: t.tabTasks, news: t.tabNews }}
         taskBadge={taskBadge}
         status={
           <>
@@ -781,7 +764,6 @@ function AppContent({
           viewStats={activeStats}
           viewIdx={activeIdx}
           garage={garage}
-          shop={shop}
           ownedCars={ownedCars}
           tasks={tasks}
           taskBadge={taskBadge}
@@ -790,7 +772,6 @@ function AppContent({
           onSelectCar={selectCar}
           onPrev={() => changeCar(-1)}
           onNext={() => changeCar(1)}
-          onOpenShop={openShop}
           onOpenDealer={openDealer}
           onEquip={equip}
           screen={screen}
@@ -824,7 +805,6 @@ function AppContent({
           viewCar={activeCar}
           viewStats={activeStats}
           garage={garage}
-          shop={shop}
           ownedCars={ownedCars}
           tasks={tasks}
           taskBadge={taskBadge}

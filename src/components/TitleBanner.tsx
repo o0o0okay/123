@@ -1,4 +1,3 @@
-import type { ReactNode } from "react";
 import { cn } from "@/utils/cn";
 
 interface TitleBannerProps {
@@ -7,12 +6,6 @@ interface TitleBannerProps {
   tag?: string;
   tagColor?: string;
   accent?: string;
-  icon?: ReactNode;
-  onIconClick?: () => void;
-  /** accessible label / tooltip for the round icon button */
-  iconLabel?: string;
-  /** visual tone so garage vs shop are instantly distinguishable */
-  iconTone?: "shop" | "garage";
   className?: string;
 }
 
@@ -57,10 +50,6 @@ export function TitleBanner({
   tag,
   tagColor = "#ff9a1f",
   accent,
-  icon,
-  onIconClick,
-  iconLabel,
-  iconTone = "shop",
   className,
 }: TitleBannerProps) {
   return (
@@ -101,25 +90,6 @@ export function TitleBanner({
 
       {/* hex emblem */}
       <HexEmblem accent={accent} className="absolute left-[96px] top-[22px]" />
-
-      {/* round icon button: garage (owned car) / shop (locked car) */}
-      {icon && (
-        <button
-          type="button"
-          id="banner-action-btn"
-          aria-label={iconLabel}
-          title={iconLabel}
-          onClick={onIconClick}
-          className={cn(
-            "absolute left-[400px] top-[90px] flex h-[54px] w-[54px] items-center justify-center rounded-full border-[3px] bg-navy-800 shadow-[0_4px_0_#0a1038,0_0_0_3px_rgba(10,16,56,0.5)] transition-transform hover:scale-110 active:translate-y-[2px]",
-            iconTone === "garage"
-              ? "border-amber-400 text-amber-400 hover:shadow-[0_4px_0_#0a1038,0_0_0_4px_rgba(255,210,58,0.35)]"
-              : "border-skyg-400 text-skyg-300 hover:shadow-[0_4px_0_#0a1038,0_0_0_4px_rgba(111,193,255,0.35)]",
-          )}
-        >
-          {icon}
-        </button>
-      )}
     </header>
   );
 }

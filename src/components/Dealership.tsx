@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState, type MouseEvent, type ReactNode } from "react";
 import { cn } from "@/utils/cn";
-import { BRANDS, carTitle, ppOf, type BrandId, type Car, type Drive } from "@/data/cars";
+import { BRANDS, carTitle, ppOf, type BrandId, type Car, type CarStats, type Drive } from "@/data/cars";
 import { fmt, type Lang, type Strings } from "@/i18n";
 import { useAnimatedNumber } from "@/hooks";
 import { useCoinFly } from "./CoinFlyEffect";
@@ -14,6 +14,7 @@ import {
   GaugeIcon,
   KeyIcon,
   NitroIcon,
+  CompareIcon,
   SearchIcon,
   SortIcon,
   StoreIcon,
@@ -22,6 +23,7 @@ import {
   UndoIcon,
 } from "@/icons";
 import { PaintedImg } from "./PaintContext";
+import { CompareButton, CompareModal, type CompareEntry } from "./CarCompare";
 import { GameButton, Modal, Toggle } from "./ui";
 
 export type SortKey = "price-asc" | "price-desc" | "pp-asc" | "pp-desc" | "bhp-desc" | "name-asc" | "year-desc";
@@ -269,6 +271,8 @@ export interface DealershipProps {
   activeId: string;
   coins: number;
   sellValueOf: (car: Car) => number;
+  /** live stats of a car (owned cars include their upgrades) */
+  statsOf: (car: Car) => CarStats;
   onBuy: (car: Car) => void;
   onSell: (car: Car) => void;
   onEquip: (car: Car) => void;
@@ -285,6 +289,7 @@ export function Dealership({
   activeId,
   coins,
   sellValueOf,
+  statsOf,
   onBuy,
   onSell,
   onEquip,
@@ -304,6 +309,9 @@ export function Dealership({
   const [hideOwned, setHideOwned] = useState(false);
   const [selectedId, setSelectedId] = useState(activeId);
   const [drawer, setDrawer] = useState(false);
+  /** ids of the two cars in the comparison (max 2) */
+  const [compareIds, setCompareIds] = useState<string[]>([]);
+  const [compareOpen, setCompareOpen] = useState(false);
 
   const animatedCoins = useAnimatedNumber(coins);
   const { isPulsing } = useCoinFly();
@@ -320,6 +328,19 @@ export function Dealership({
     window.addEventListener("keydown", onKey, true);
     return () => window.removeEventListener("keydown", onKey, true);
   }, [drawer]);
+
+  // Escape closes the comparison board (or empties the queue) before the dealership itself
+  useEffect(() => {
+    if (!compareOpen && compareIds.length === 0) return;
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key !== "Escape") return;
+      e.stopImmediatePropagation();
+      if (compareOpen) setCompareOpen(false);
+      else setCompareIds([]);
+    };
+    window.addEventListener("keydown", onKey, true);
+    return () => window.removeEventListener("keydown", onKey, true);
+  }, [compareOpen, compareIds.length]);
 
   /* ---------------- filtering + sorting ---------------- */
   const list = useMemo(() => {
@@ -410,6 +431,47 @@ export function Dealership({
     }
     onBuy(car);
   };
+
+  /* ---------------- comparison ---------------- */
+  const toEntry = (car: Car): CompareEntry => {
+    const isOwned = owned.includes(car.id);
+    return {
+      car,
+      owned: isOwned,
+      equipped: car.id === activeId,
+      stats: statsOf(car),
+      price: car.price,
+      sellValue: isOwned ? sellValueOf(car) : undefined,
+    };
+  };
+
+  const toggleCompare = (car: Car) => {
+    onSfx?.("toggle");
+    setCompareIds((cur) => {
+      if (cur.includes(car.id)) return cur.filter((id) => id !== car.id);
+      // keep the queue at two slots: newest wins, the oldest drops out
+      return [...cur, car.id].slice(-2);
+    });
+  };
+
+  /** action-bar button: toggles the selected car in/out of the queue, opens the board at 2/2 */
+  const openCompare = (fallback?: Car) => {
+    const car = fallback ?? selected;
+    if (!car) return;
+    click();
+    if (compareIds.includes(car.id)) {
+      setCompareIds((cur) => cur.filter((id) => id !== car.id));
+      return;
+    }
+    const next = [...compareIds, car.id].slice(-2);
+    setCompareIds(next);
+    if (next.length === 2) setCompareOpen(true);
+  };
+
+  const compareEntries = compareIds
+    .map((id) => cars.find((c) => c.id === id))
+    .filter((c): c is Car => !!c)
+    .map(toEntry);
 
   const filterProps: FilterPanelProps = {
     t,
@@ -594,58 +656,78 @@ export function Dealership({
           : coins >= car.price
             ? "text-amber-400"
             : "text-[#ff8a6a]";
+    const inCompare = compareIds.includes(car.id);
     return (
-      <div key={car.id} className="flex min-w-0 flex-col">
-        <button
-          type="button"
-          onClick={() => select(car)}
-          onDoubleClick={() => primary(car)}
-          aria-label={carTitle(car)}
-          aria-pressed={isSel}
-          className={cn(
-            // items-stretch overrides Chrome's UA `button { align-items: flex-start }` so the content centres
-            "relative flex flex-col items-stretch rounded-[14px] border-[3px] px-[9px] pb-[8px] pt-[7px] transition-all duration-150",
-            isSel
-              ? "-translate-y-[2px] border-skyg-300 bg-[#2b4f93]/90 shadow-[0_0_0_3px_rgba(111,193,255,0.35),0_6px_0_#060a28]"
-              : "border-ink bg-navy-800/75 shadow-[0_4px_0_#060a28] hover:-translate-y-[1px] hover:bg-navy-700/85",
-          )}
-        >
-          {isOwned && (
-            <span
-              className={cn(
-                "absolute -top-[10px] left-1/2 z-10 -translate-x-1/2 whitespace-nowrap rounded-full border-[2px] border-ink px-[7px] font-body text-[9px] font-black leading-[15px] text-ink",
-                car.id === activeId ? "bg-skyg-300" : "bg-mint-400",
-              )}
-            >
-              {car.id === activeId ? t.equipped : t.owned}
-            </span>
-          )}
-          <div className="flex items-start justify-between gap-[4px]" dir="ltr">
-            <BrandBadge brand={car.brand} size={desk ? 24 : 26} />
-            <div className="text-end font-body text-[10px] font-black leading-[1.2] text-white/70">
-              {car.bhp} BHP
-              <br />
-              {car.drive}
+      <div key={car.id} className="relative flex min-w-0 flex-col">
+        <div className="relative">
+          <button
+            type="button"
+            onClick={() => select(car)}
+            onDoubleClick={() => primary(car)}
+            aria-label={carTitle(car)}
+            aria-pressed={isSel}
+            className={cn(
+              // items-stretch overrides Chrome's UA `button { align-items: flex-start }` so the content centres
+              "relative flex flex-col items-stretch rounded-[14px] border-[3px] px-[9px] pb-[8px] pt-[7px] transition-all duration-150",
+              isSel
+                ? "-translate-y-[2px] border-skyg-300 bg-[#2b4f93]/90 shadow-[0_0_0_3px_rgba(111,193,255,0.35),0_6px_0_#060a28]"
+                : inCompare
+                  ? "border-skyg-400/80 bg-[#243a72]/85 shadow-[0_0_0_2px_rgba(111,193,255,0.25),0_4px_0_#060a28]"
+                  : "border-ink bg-navy-800/75 shadow-[0_4px_0_#060a28] hover:-translate-y-[1px] hover:bg-navy-700/85",
+            )}
+          >
+            {isOwned && (
+              <span
+                className={cn(
+                  "absolute -top-[10px] left-1/2 z-10 -translate-x-1/2 whitespace-nowrap rounded-full border-[2px] border-ink px-[7px] font-body text-[9px] font-black leading-[15px] text-ink",
+                  car.id === activeId ? "bg-skyg-300" : "bg-mint-400",
+                )}
+              >
+                {car.id === activeId ? t.equipped : t.owned}
+              </span>
+            )}
+            <div className="flex items-start justify-between gap-[4px]" dir="ltr">
+              <BrandBadge brand={car.brand} size={desk ? 24 : 26} />
+              <div className="text-end font-body text-[10px] font-black leading-[1.2] text-white/70">
+                {car.bhp} BHP
+                <br />
+                {car.drive}
+              </div>
             </div>
-          </div>
-          <div className={cn("relative my-[3px] flex w-full items-center justify-center", desk ? "h-[62px]" : "h-[76px]")}>
-            <PaintedImg
-              carId={car.id}
-              shadow="drop-shadow(0 5px 4px rgba(0,0,0,0.5))"
-              src={car.image}
-              alt=""
-              draggable={false}
-              className="max-h-full max-w-[94%] object-contain"
-            />
-          </div>
-          <div className={cn("flex items-center justify-center gap-[4px] font-display text-[17px] italic leading-none", priceClass)} dir="ltr">
-            <CoinIcon width={15} height={15} />
-            {mode === "sell" ? `+${price.toLocaleString("en-US")}` : price === 0 ? t.free : price.toLocaleString("en-US")}
-          </div>
-          <div className="mt-[4px] text-center font-display text-[13px] leading-none tracking-wide text-white/85" dir="ltr">
-            PP {ppOf(car)}
-          </div>
-        </button>
+            <div className={cn("relative my-[3px] flex w-full items-center justify-center", desk ? "h-[62px]" : "h-[76px]")}>
+              <PaintedImg
+                carId={car.id}
+                shadow="drop-shadow(0 5px 4px rgba(0,0,0,0.5))"
+                src={car.image}
+                alt=""
+                draggable={false}
+                className="max-h-full max-w-[94%] object-contain"
+              />
+            </div>
+            <div className={cn("flex items-center justify-center gap-[4px] font-display text-[17px] italic leading-none", priceClass)} dir="ltr">
+              <CoinIcon width={15} height={15} />
+              {mode === "sell" ? `+${price.toLocaleString("en-US")}` : price === 0 ? t.free : price.toLocaleString("en-US")}
+            </div>
+            <div className="mt-[4px] text-center font-display text-[13px] leading-none tracking-wide text-white/85" dir="ltr">
+              PP {ppOf(car)}
+            </div>
+          </button>
+          <button
+            type="button"
+            onClick={() => toggleCompare(car)}
+            aria-label={inCompare ? t.compareRemove : t.comparePick}
+            aria-pressed={inCompare}
+            title={inCompare ? t.compareRemove : t.comparePick}
+            className={cn(
+              "absolute bottom-[3px] end-[3px] z-20 flex h-[22px] min-w-[22px] items-center justify-center gap-[1px] rounded-[7px] border-[2px] border-ink px-[2px] font-body text-[10px] font-black leading-none shadow-[0_2px_0_#060a28] transition-all active:translate-y-[1px] active:shadow-none",
+              inCompare
+                ? "bg-gradient-to-b from-[#8fd0ff] to-[#3d8ff5] text-ink"
+                : "bg-navy-950/80 text-white/45 opacity-70 hover:text-white hover:opacity-100",
+            )}
+          >
+            {inCompare ? compareIds.indexOf(car.id) + 1 : <CompareIcon width={12} height={12} />}
+          </button>
+        </div>
         <div className="mt-[6px] line-clamp-2 px-[2px] text-center font-body text-[12px] font-extrabold leading-tight text-white/85" dir="ltr">
           {carTitle(car)}
         </div>
@@ -724,6 +806,14 @@ export function Dealership({
           {stat(<NitroIcon width={20} height={20} />, t.boost, selected.boost, "text-[#c98cff]")}
         </div>
       )}
+      <CompareButton
+        t={t}
+        active={compareIds.includes(selected.id)}
+        count={compareIds.length}
+        onClick={() => openCompare(selected)}
+        className={desk ? undefined : "h-[44px] min-w-[46px] justify-center px-[8px] text-[13px]"}
+        labelClassName={desk ? undefined : "hidden sm:inline"}
+      />
       {renderAction(selected, desk)}
     </div>
   );
@@ -880,6 +970,119 @@ export function Dealership({
         {actionBar}
         {ticker}
       </div>
+
+      {/* comparison tray */}
+      {compareIds.length > 0 && !compareOpen && (
+        <div
+          className={cn(
+            "absolute inset-x-0 z-30 flex justify-center px-[10px]",
+            desk ? "bottom-[104px]" : "bottom-[96px]",
+          )}
+        >
+          <div className="flex max-w-full items-center gap-[8px] rounded-[16px] border-[3px] border-ink bg-navy-950/92 px-[9px] py-[7px] shadow-[0_6px_0_#060a28,0_0_22px_rgba(111,193,255,0.25)] backdrop-blur-[2px]">
+            <span className="hidden shrink-0 items-center gap-[5px] font-body text-[10px] font-black tracking-wider text-white/45 sm:flex">
+              <CompareIcon width={13} height={13} className="text-skyg-300" />
+              {t.compareTray}
+            </span>
+
+            {[0, 1].map((i) => {
+              const entry = compareEntries[i];
+              return (
+                <div
+                  key={i}
+                  className={cn(
+                    "flex h-[38px] items-center gap-[5px] rounded-[10px] border-[2.5px] border-ink px-[6px]",
+                    entry ? "bg-navy-800" : "border-dashed bg-navy-950/60",
+                  )}
+                >
+                  {entry ? (
+                    <>
+                      <PaintedImg carId={entry.car.id} src={entry.car.image} alt="" className="h-[26px] w-[40px] object-contain" />
+                      <span className="hidden max-w-[92px] truncate font-display text-[12px] leading-none text-white/85 sm:inline" dir="ltr">
+                        {carTitle(entry.car)}
+                      </span>
+                      <button
+                        type="button"
+                        onClick={() => toggleCompare(entry.car)}
+                        aria-label={t.compareRemove}
+                        className="flex h-[17px] w-[17px] shrink-0 items-center justify-center rounded-full bg-white/10 text-white/60 hover:text-white"
+                      >
+                        <CloseIcon width={9} height={9} />
+                      </button>
+                    </>
+                  ) : (
+                    <span className="px-[6px] font-body text-[10px] font-black text-white/30">+ {t.comparePick}</span>
+                  )}
+                </div>
+              );
+            })}
+
+            {activeCar && !compareIds.includes(activeCar.id) && compareIds.length < 2 && (
+              <button
+                type="button"
+                onClick={() => toggleCompare(activeCar)}
+                className="hidden h-[38px] shrink-0 items-center gap-[4px] rounded-[10px] border-[2.5px] border-ink bg-[#22346e] px-[8px] font-body text-[10px] font-black text-mint-400 transition-transform active:translate-y-[2px] sm:flex"
+              >
+                <KeyIcon width={12} height={12} />
+                {t.myCar}
+              </button>
+            )}
+
+            <button
+              type="button"
+              disabled={compareIds.length < 2}
+              onClick={() => {
+                click();
+                setCompareOpen(true);
+              }}
+              className={cn(
+                "flex h-[38px] shrink-0 items-center gap-[5px] rounded-[10px] border-[2.5px] border-ink px-[10px] font-display text-[14px] tracking-wide transition-transform active:translate-y-[2px]",
+                compareIds.length === 2
+                  ? "animate-glow bg-gradient-to-b from-[#ffe05a] to-[#ffa41c] text-ink shadow-[0_3px_0_#c9660e]"
+                  : "bg-navy-900 text-white/30",
+              )}
+            >
+              <CompareIcon width={15} height={15} />
+              {t.compareOpen}
+            </button>
+
+            <button
+              type="button"
+              onClick={() => {
+                click();
+                setCompareIds([]);
+              }}
+              aria-label={t.compareClear}
+              className="flex h-[38px] w-[30px] shrink-0 items-center justify-center rounded-[10px] border-[2.5px] border-ink bg-navy-800 text-white/55 transition-transform active:translate-y-[2px]"
+            >
+              <CloseIcon width={13} height={13} />
+            </button>
+          </div>
+        </div>
+      )}
+
+      {/* comparison board */}
+      {compareOpen && compareEntries.length === 2 && (
+        <CompareModal
+          t={t}
+          desk={desk}
+          a={compareEntries[0]}
+          b={compareEntries[1]}
+          onClose={() => {
+            click();
+            setCompareOpen(false);
+          }}
+          onClear={() => {
+            click();
+            setCompareOpen(false);
+            setCompareIds([]);
+          }}
+          onSwap={() => {
+            onSfx?.("swoosh");
+            setCompareIds(([x, y]) => [y, x]);
+          }}
+        />
+      )}
 
       {/* mobile filter sidebar (drawer) */}
       {!desk && (

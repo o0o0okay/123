@@ -543,3 +543,12 @@ export const SprayIcon = (p: P) => (
     <circle cx="20.2" cy="10.6" r="1.15" />
   </Svg>
 );
+
+/** Two arrows pointing at each other — compare. */
+export const CompareIcon = (p: P) => (
+  <Svg {...p}>
+    <path d="M3.2 7.4h11.2l-2.6-2.6a1.25 1.25 0 0 1 1.8-1.8l4.6 4.6a1.25 1.25 0 0 1 0 1.8l-4.6 4.6a1.25 1.25 0 0 1-1.8-1.8l2.6-2.5H3.2a1.3 1.3 0 0 1 0-2.6z" />
+    <path d="M20.8 16.6H9.6l2.6-2.6a1.25 1.25 0 0 0-1.8-1.8l-4.6 4.6a1.25 1.25 0 0 0 0 1.8l4.6 4.6a1.25 1.25 0 0 0 1.8-1.8l-2.6-2.5h11.2a1.3 1.3 0 0 0 0-2.6z" />
+  </Svg>
+);
+

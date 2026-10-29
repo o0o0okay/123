@@ -29,6 +29,7 @@ import { HexEmblem, TitleBanner } from "./TitleBanner";
 import { CarShowcase } from "./CarShowcase";
 import { GarageView, type GarageData } from "./GaragePanel";
 import { TasksPanel, type TaskView } from "./TasksPanel";
+import type { DailyView } from "@/data/daily";
 import { RacePanel, type RaceProps } from "./RacePanel";
 import { NewsPanel } from "./NewsPanel";
 import { StatPills, StatsRow } from "./Stats";
@@ -54,6 +55,9 @@ export interface DesktopViewProps {
   tasks: TaskView[];
   taskBadge: number;
   onClaimTask: (id: string, e: MouseEvent<HTMLButtonElement>) => void;
+  /** daily login check-in */
+  daily: DailyView;
+  onClaimDaily: (e: MouseEvent<HTMLButtonElement>) => void;
   race: RaceProps;
   onSelectCar: (i: number) => void;
   onPrev: () => void;
@@ -580,6 +584,8 @@ export function DesktopView(p: DesktopViewProps) {
                   tasks={p.tasks}
                   coins={p.garage.coins}
                   onClaim={p.onClaimTask}
+                  daily={p.daily}
+                  onClaimDaily={p.onClaimDaily}
                   dense
                   className="h-full"
                 />

@@ -23,6 +23,7 @@ import { loadPlayer, savePlayer, levelsOf, paintOf, ZERO_LEVELS, type PlayerStat
 import { useSfx, useViewport } from "./hooks";
 import { detectWallets, generateDemoAddress, type SolanaWalletInfo } from "./solana";
 import { TASKS, type TaskMetric } from "./data/tasks";
+import { claimDaily, DEFAULT_DAILY, resolveDaily } from "./data/daily";
 import { TasksView, type TaskView } from "./components/TasksPanel";
 import { RaceView, type RaceProps } from "./components/RacePanel";
 import { RaceOverlay } from "./components/RaceOverlay";
@@ -129,7 +130,17 @@ function AppContent({
     progress: Math.min(metricValue(d.metric), d.goal),
     claimed: playerState.tasksClaimed.includes(d.id),
   }));
-  const taskBadge = tasks.filter((x) => !x.claimed && x.progress >= x.goal).length;
+  const loginReady = tasks.filter((x) => !x.claimed && x.progress >= x.goal).length;
+
+  /* ---------------- daily check-in ---------------- */
+  // `clock` only exists to re-evaluate the daily view at midnight / after a claim
+  const [clock, setClock] = useState(() => Date.now());
+  useEffect(() => {
+    const id = window.setInterval(() => setClock(Date.now()), 30_000);
+    return () => window.clearInterval(id);
+  }, []);
+  const daily = resolveDaily(playerState.daily ?? DEFAULT_DAILY, new Date(clock));
+  const taskBadge = loginReady + (daily.claimedToday ? 0 : 1);
 
   /* persist player progress */
   useEffect(() => {
@@ -376,6 +387,34 @@ function AppContent({
       tasksClaimed: [...p.tasksClaimed, id],
     }));
     showToast(fmt(t.claimedToast, { n: def.reward.toLocaleString("en-US") }), "success");
+  };
+
+  /* ---------------- daily check-in ---------------- */
+  const claimDailyReward = (e?: MouseEvent<HTMLButtonElement>) => {
+    if (daily.claimedToday) {
+      sfx("error");
+      return;
+    }
+    sfx("coinJingle");
+
+    // coins fly from the button into the top counter, same as missions
+    triggerCoinFly({
+      startEl: e?.currentTarget,
+      startX: e?.clientX,
+      startY: e?.clientY,
+      amount: daily.reward,
+      targetId: isDesktop ? "desktop-top-coin-badge" : "panel-coin-badge",
+    });
+
+    const nextStreak = daily.streak + 1;
+    setPlayerState((p) => ({
+      ...p,
+      coins: p.coins + daily.reward,
+      daily: claimDaily(p.daily ?? DEFAULT_DAILY, new Date()),
+    }));
+    setClock(Date.now());
+    showToast(fmt(t.dailyClaimedToast, { n: daily.reward.toLocaleString("en-US") }), "success");
+    if (nextStreak % 7 === 0) showToast(fmt(t.dailyStreakToast, { n: nextStreak }), "success");
   };
 
   /* ------------------- Solana Connect Actions ------------------- */
@@ -710,7 +749,17 @@ function AppContent({
         )}
         {tab === "race" && <RaceView t={t} lang={lang} race={race} />}
         {tab === "garage" && <GarageView t={t} garage={garage} ownedCars={ownedCars} onEquip={equip} />}
-        {tab === "tasks" && <TasksView t={t} lang={lang} tasks={tasks} coins={coins} onClaim={claimTask} />}
+        {tab === "tasks" && (
+          <TasksView
+            t={t}
+            lang={lang}
+            tasks={tasks}
+            coins={coins}
+            onClaim={claimTask}
+            daily={daily}
+            onClaimDaily={claimDailyReward}
+          />
+        )}
         {tab === "news" && <NewsPanel items={t.news} title={t.tabNews} />}
       </main>
 
@@ -806,6 +855,8 @@ function AppContent({
           tasks={tasks}
           taskBadge={taskBadge}
           onClaimTask={claimTask}
+          daily={daily}
+          onClaimDaily={claimDailyReward}
           race={race}
           onSelectCar={selectCar}
           onPrev={() => changeCar(-1)}
@@ -847,6 +898,8 @@ function AppContent({
           tasks={tasks}
           taskBadge={taskBadge}
           onClaimTask={claimTask}
+          daily={daily}
+          onClaimDaily={claimDailyReward}
           race={race}
           player={player}
           server={settings.server}

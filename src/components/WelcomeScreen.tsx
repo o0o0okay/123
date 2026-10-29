@@ -7,6 +7,7 @@ import { TitleBanner } from "./TitleBanner";
 import { CarShowcase } from "./CarShowcase";
 import { GarageView, type GarageData } from "./GaragePanel";
 import { TasksView, type TaskView } from "./TasksPanel";
+import type { DailyView } from "@/data/daily";
 import { RaceView, type RaceProps } from "./RacePanel";
 import { NewsPanel } from "./NewsPanel";
 import { StatPills, StatsRow } from "./Stats";
@@ -35,6 +36,9 @@ interface Props {
   tasks: TaskView[];
   taskBadge: number;
   onClaimTask: (id: string, e: MouseEvent<HTMLButtonElement>) => void;
+  /** daily login check-in */
+  daily: DailyView;
+  onClaimDaily: (e: MouseEvent<HTMLButtonElement>) => void;
   race: RaceProps;
   player: Player;
   server: string;
@@ -60,6 +64,8 @@ export function WelcomeScreen({
   tasks,
   taskBadge,
   onClaimTask,
+  daily,
+  onClaimDaily,
   race,
   player,
   server,
@@ -105,7 +111,15 @@ export function WelcomeScreen({
         {tab === "race" && <RaceView t={t} lang={lang} race={race} />}
         {tab === "garage" && <GarageView t={t} garage={garage} ownedCars={ownedCars} onEquip={onEquip} />}
         {tab === "tasks" && (
-          <TasksView t={t} lang={lang} tasks={tasks} coins={garage.coins} onClaim={onClaimTask} />
+          <TasksView
+            t={t}
+            lang={lang}
+            tasks={tasks}
+            coins={garage.coins}
+            onClaim={onClaimTask}
+            daily={daily}
+            onClaimDaily={onClaimDaily}
+          />
         )}
         {tab === "news" && <NewsPanel items={t.news} title={t.tabNews} />}
       </main>

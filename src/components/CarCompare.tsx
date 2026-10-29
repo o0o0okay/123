@@ -4,7 +4,7 @@ import { BRANDS, carTitle, ppOf, type Car, type CarStats } from "@/data/cars";
 import type { Strings } from "@/i18n";
 import { BumperIcon, CloseIcon, CoinIcon, CompareIcon, GaugeIcon, KeyIcon, NitroIcon, TagIcon, TireIcon, TrophyIcon } from "@/icons";
 import { PaintedImg } from "./PaintContext";
-import { BrandBadge } from "./Dealership";
+import { BrandBadge } from "./DealerBits";
 
 /** One side of a comparison: a car plus its live numbers. */
 export interface CompareEntry {

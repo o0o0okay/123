@@ -2,6 +2,7 @@ import type { UpgradeKey } from "./data/cars";
 import { MAX_LEVEL, cars } from "./data/cars";
 import { STOCK_PAINT, type Paints } from "./data/paints";
 import { DEFAULT_TASK_PROGRESS, type TaskProgress } from "./data/tasks";
+import { DEFAULT_DAILY, type DailyState } from "./data/daily";
 
 export interface PlayerState {
   coins: number;
@@ -18,6 +19,8 @@ export interface PlayerState {
   taskProgress: TaskProgress;
   /** ids of missions whose reward was claimed */
   tasksClaimed: string[];
+  /** daily login check-in (streak + last claim day) */
+  daily: DailyState;
   bestEscape: number;
   totalRuns: number;
   /** wins per race mode */
@@ -39,6 +42,7 @@ export const DEFAULT_PLAYER: PlayerState = {
   runReward: 2400,
   taskProgress: { ...DEFAULT_TASK_PROGRESS },
   tasksClaimed: [],
+  daily: { ...DEFAULT_DAILY },
   bestEscape: 0,
   totalRuns: 0,
   raceWins: {},
@@ -69,6 +73,7 @@ export function loadPlayer(): PlayerState {
       paints: { ...(parsed.paints ?? {}) },
       taskProgress: { ...DEFAULT_TASK_PROGRESS, ...(parsed.taskProgress ?? {}) },
       tasksClaimed: Array.isArray(parsed.tasksClaimed) ? parsed.tasksClaimed : [],
+      daily: { ...DEFAULT_DAILY, ...(parsed.daily ?? {}) },
       raceWins: { ...(parsed.raceWins ?? {}) },
       raceCount: parsed.raceCount ?? 0,
     };

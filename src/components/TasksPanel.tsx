@@ -1,6 +1,7 @@
 import type { MouseEvent, ReactNode } from "react";
 import { cn } from "@/utils/cn";
 import type { TaskDef, TaskIconKey } from "@/data/tasks";
+import type { DailyView } from "@/data/daily";
 import { fmt, type Lang, type Strings } from "@/i18n";
 import { useAnimatedNumber } from "@/hooks";
 import { useCoinFly } from "./CoinFlyEffect";
@@ -18,6 +19,7 @@ import {
   FlagIcon,
 } from "@/icons";
 import { FloatingPanel } from "./ui";
+import { Countdown, DailyReward } from "./DailyReward";
 
 /** A mission definition combined with the player's live progress. */
 export interface TaskView extends TaskDef {
@@ -188,17 +190,20 @@ interface Props {
   tasks: TaskView[];
   coins: number;
   onClaim: (id: string, e: MouseEvent<HTMLButtonElement>) => void;
+  /** daily login check-in state (streak, today's reward, countdown) */
+  daily: DailyView;
+  onClaimDaily: (e: MouseEvent<HTMLButtonElement>) => void;
   className?: string;
   dense?: boolean;
 }
 
-export function TasksPanel({ t, lang, tasks, coins, onClaim, className, dense }: Props) {
+export function TasksPanel({ t, lang, tasks, coins, onClaim, daily, onClaimDaily, className, dense }: Props) {
   const animatedCoins = useAnimatedNumber(coins);
   const { isPulsing } = useCoinFly();
-  const claimable = tasks.filter((x) => !x.claimed && x.progress >= x.goal).length;
-  const daily = tasks.filter((x) => x.scope === "daily");
+  const claimable = tasks.filter((x) => !x.claimed && x.progress >= x.goal).length + (daily.claimedToday ? 0 : 1);
+  const dailyMissions = tasks.filter((x) => x.scope === "daily");
   const season = tasks.filter((x) => x.scope === "season");
-  const dailyDone = daily.every((x) => x.claimed);
+  const dailyDone = dailyMissions.every((x) => x.claimed);
 
   return (
     <div className={cn("flex h-full flex-col gap-[9px]", className)}>
@@ -231,8 +236,10 @@ export function TasksPanel({ t, lang, tasks, coins, onClaim, className, dense }:
       </div>
 
       <div className="no-scrollbar min-h-0 flex-1 space-y-[10px] overflow-y-auto pe-[2px]">
+        <DailyReward t={t} daily={daily} onClaim={onClaimDaily} dense={dense} />
+
         <Section title={t.dailyTasks} badge={dailyDone ? t.claimed : undefined} dense={dense}>
-          {daily.map((task) => (
+          {dailyMissions.map((task) => (
             <TaskRow key={task.id} t={t} lang={lang} task={task} onClaim={onClaim} dense={dense} />
           ))}
         </Section>
@@ -245,7 +252,7 @@ export function TasksPanel({ t, lang, tasks, coins, onClaim, className, dense }:
 
         <div className="flex items-center justify-center gap-[6px] pb-[2px] font-body text-[10px] font-black tracking-wider text-white/35">
           <ClipboardIcon width={13} height={13} />
-          {t.dailyTasks} · {t.resetIn} 11:24:07
+          {t.dailyTasks} · {t.resetIn} <Countdown ms={daily.msToReset} />
         </div>
       </div>
     </div>
@@ -259,11 +266,22 @@ export function TasksView({
   tasks,
   coins,
   onClaim,
+  daily,
+  onClaimDaily,
   className,
 }: Props) {
   return (
     <FloatingPanel title={t.tasksTitle} className={className}>
-      <TasksPanel t={t} lang={lang} tasks={tasks} coins={coins} onClaim={onClaim} className="min-h-0 flex-1" />
+      <TasksPanel
+        t={t}
+        lang={lang}
+        tasks={tasks}
+        coins={coins}
+        onClaim={onClaim}
+        daily={daily}
+        onClaimDaily={onClaimDaily}
+        className="min-h-0 flex-1"
+      />
     </FloatingPanel>
   );
 }

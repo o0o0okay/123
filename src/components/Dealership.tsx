@@ -647,6 +647,7 @@ export function Dealership({
   const renderCard = (car: Car) => {
     const isOwned = owned.includes(car.id);
     const isSel = selected?.id === car.id;
+    const inCompare = compareIds.includes(car.id);
     const price = mode === "sell" ? sellValueOf(car) : car.price;
     const priceClass =
       mode === "sell"
@@ -656,80 +657,78 @@ export function Dealership({
           : coins >= car.price
             ? "text-amber-400"
             : "text-[#ff8a6a]";
-    const inCompare = compareIds.includes(car.id);
     return (
-      <div key={car.id} className="relative flex min-w-0 flex-col">
-        <div className="relative">
-          <button
-            type="button"
-            onClick={() => select(car)}
-            onDoubleClick={() => primary(car)}
-            aria-label={carTitle(car)}
-            aria-pressed={isSel}
-            className={cn(
-              // items-stretch overrides Chrome's UA `button { align-items: flex-start }` so the content centres
-              "relative flex flex-col items-stretch rounded-[14px] border-[3px] px-[9px] pb-[8px] pt-[7px] transition-all duration-150",
-              isSel
-                ? "-translate-y-[2px] border-skyg-300 bg-[#2b4f93]/90 shadow-[0_0_0_3px_rgba(111,193,255,0.35),0_6px_0_#060a28]"
-                : inCompare
-                  ? "border-skyg-400/80 bg-[#243a72]/85 shadow-[0_0_0_2px_rgba(111,193,255,0.25),0_4px_0_#060a28]"
-                  : "border-ink bg-navy-800/75 shadow-[0_4px_0_#060a28] hover:-translate-y-[1px] hover:bg-navy-700/85",
-            )}
+      // every tile is exactly the same size: a fixed card + a one-line name plate
+      <div key={car.id} className="flex min-w-0 flex-col">
+        <button
+          type="button"
+          onClick={() => select(car)}
+          onDoubleClick={() => primary(car)}
+          aria-label={carTitle(car)}
+          aria-pressed={isSel}
+          className={cn(
+            // items-stretch overrides Chrome's UA `button { align-items: flex-start }` so the content centres
+            "relative flex w-full flex-col items-stretch rounded-[14px] border-[3px] px-[9px] pb-[7px] pt-[6px] transition-all duration-150",
+            desk ? "h-[148px]" : "h-[164px]",
+            isSel
+              ? "-translate-y-[2px] border-skyg-300 bg-[#2b4f93]/90 shadow-[0_0_0_3px_rgba(111,193,255,0.35),0_6px_0_#060a28]"
+              : inCompare
+                ? "border-skyg-400/80 bg-[#243a72]/85 shadow-[0_0_0_2px_rgba(111,193,255,0.25),0_4px_0_#060a28]"
+                : "border-ink bg-navy-800/75 shadow-[0_4px_0_#060a28] hover:-translate-y-[1px] hover:bg-navy-700/85",
+          )}
+        >
+          {isOwned && (
+            <span
+              className={cn(
+                "absolute -top-[10px] left-1/2 z-10 -translate-x-1/2 whitespace-nowrap rounded-full border-[2px] border-ink px-[7px] font-body text-[9px] font-black leading-[15px] text-ink",
+                car.id === activeId ? "bg-skyg-300" : "bg-mint-400",
+              )}
+            >
+              {car.id === activeId ? t.equipped : t.owned}
+            </span>
+          )}
+          <div
+            className={cn("flex shrink-0 items-start justify-between gap-[4px]", desk ? "h-[28px]" : "h-[31px]")}
+            dir="ltr"
           >
-            {isOwned && (
-              <span
-                className={cn(
-                  "absolute -top-[10px] left-1/2 z-10 -translate-x-1/2 whitespace-nowrap rounded-full border-[2px] border-ink px-[7px] font-body text-[9px] font-black leading-[15px] text-ink",
-                  car.id === activeId ? "bg-skyg-300" : "bg-mint-400",
-                )}
-              >
-                {car.id === activeId ? t.equipped : t.owned}
-              </span>
-            )}
-            <div className="flex items-start justify-between gap-[4px]" dir="ltr">
-              <BrandBadge brand={car.brand} size={desk ? 24 : 26} />
-              <div className="text-end font-body text-[10px] font-black leading-[1.2] text-white/70">
-                {car.bhp} BHP
-                <br />
-                {car.drive}
-              </div>
+            <BrandBadge brand={car.brand} size={desk ? 22 : 24} />
+            <div className="text-end font-body text-[10px] font-black leading-[1.2] text-white/70">
+              {car.bhp} BHP
+              <br />
+              {car.drive}
             </div>
-            <div className={cn("relative my-[3px] flex w-full items-center justify-center", desk ? "h-[62px]" : "h-[76px]")}>
-              <PaintedImg
-                carId={car.id}
-                shadow="drop-shadow(0 5px 4px rgba(0,0,0,0.5))"
-                src={car.image}
-                alt=""
-                draggable={false}
-                className="max-h-full max-w-[94%] object-contain"
-              />
-            </div>
-            <div className={cn("flex items-center justify-center gap-[4px] font-display text-[17px] italic leading-none", priceClass)} dir="ltr">
-              <CoinIcon width={15} height={15} />
-              {mode === "sell" ? `+${price.toLocaleString("en-US")}` : price === 0 ? t.free : price.toLocaleString("en-US")}
-            </div>
-            <div className="mt-[4px] text-center font-display text-[13px] leading-none tracking-wide text-white/85" dir="ltr">
-              PP {ppOf(car)}
-            </div>
-          </button>
-          <button
-            type="button"
-            onClick={() => toggleCompare(car)}
-            aria-label={inCompare ? t.compareRemove : t.comparePick}
-            aria-pressed={inCompare}
-            title={inCompare ? t.compareRemove : t.comparePick}
+          </div>
+          <div className="relative my-[2px] flex min-h-0 w-full flex-1 items-center justify-center">
+            <PaintedImg
+              carId={car.id}
+              shadow="drop-shadow(0 5px 4px rgba(0,0,0,0.5))"
+              src={car.image}
+              alt=""
+              draggable={false}
+              className="max-h-full max-w-[94%] object-contain"
+            />
+          </div>
+          <div
             className={cn(
-              "absolute bottom-[3px] end-[3px] z-20 flex h-[22px] min-w-[22px] items-center justify-center gap-[1px] rounded-[7px] border-[2px] border-ink px-[2px] font-body text-[10px] font-black leading-none shadow-[0_2px_0_#060a28] transition-all active:translate-y-[1px] active:shadow-none",
-              inCompare
-                ? "bg-gradient-to-b from-[#8fd0ff] to-[#3d8ff5] text-ink"
-                : "bg-navy-950/80 text-white/45 opacity-70 hover:text-white hover:opacity-100",
+              "flex h-[18px] shrink-0 items-center justify-center gap-[4px] font-display text-[17px] italic leading-none",
+              priceClass,
             )}
+            dir="ltr"
           >
-            {inCompare ? compareIds.indexOf(car.id) + 1 : <CompareIcon width={12} height={12} />}
-          </button>
-        </div>
-        <div className="mt-[6px] line-clamp-2 px-[2px] text-center font-body text-[12px] font-extrabold leading-tight text-white/85" dir="ltr">
-          {carTitle(car)}
+            <CoinIcon width={15} height={15} />
+            {mode === "sell" ? `+${price.toLocaleString("en-US")}` : price === 0 ? t.free : price.toLocaleString("en-US")}
+          </div>
+          <div
+            className="mt-[3px] flex h-[14px] shrink-0 items-center justify-center font-display text-[13px] leading-none tracking-wide text-white/85"
+            dir="ltr"
+          >
+            PP {ppOf(car)}
+          </div>
+        </button>
+        <div className="mt-[6px] flex h-[16px] items-center justify-center px-[2px]" dir="ltr">
+          <span className="w-full truncate text-center font-body text-[12px] font-extrabold leading-none text-white/85">
+            {carTitle(car)}
+          </span>
         </div>
       </div>
     );
@@ -752,7 +751,7 @@ export function Dealership({
   const grid = list.length ? (
     <div
       className={cn(
-        "grid gap-x-[14px] gap-y-[18px]",
+        "grid items-start gap-x-[14px] gap-y-[18px]",
         desk ? "grid-cols-[repeat(auto-fill,minmax(164px,1fr))]" : "grid-cols-2 gap-x-[12px] gap-y-[16px]",
       )}
     >

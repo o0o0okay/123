@@ -1,102 +1,36 @@
+import { BODY_COLORS, PAINT_FILTERS } from "./paintFilters";
+
 /**
  * Paints that can be sprayed on an owned car in the garage.
  *
- * Every car sprite is recoloured with a CSS filter (hue rotation + saturation),
- * which keeps the artwork, windows and shading intact while changing the body
- * colour. Applying a paint always costs coins — the stock colour is free so the
- * player can always go back to the factory look.
+ * Every sprite has its own body colour, so each paint stores the colour it is
+ * supposed to look like (`hex`); `paintFilters.ts` (generated) holds the CSS
+ * filter that maps every car sprite onto that colour. That way the chip in the
+ * picker and the car on screen always show the same paint.
  */
 export interface Paint {
   id: string;
   name: { en: string; fa: string };
-  /** coins charged every time this paint is applied */
+  /** coins charged every time this paint is applied (0 = factory colour) */
   price: number;
-  /** CSS filter applied to the car sprite ("" = untouched factory paint) */
-  filter: string;
-  /** two-stop gradient used for the colour chip in the picker */
-  swatch: string;
+  /** the colour the car body turns into */
+  hex: string;
 }
 
 export const STOCK_PAINT = "stock";
 
 export const PAINTS: Paint[] = [
-  {
-    id: STOCK_PAINT,
-    name: { en: "FACTORY", fa: "رنگ کارخانه" },
-    price: 0,
-    filter: "",
-    swatch: "linear-gradient(135deg,#6f9bf0,#2b4fa8)",
-  },
-  {
-    id: "crimson",
-    name: { en: "CRIMSON", fa: "زرشکی" },
-    price: 400,
-    filter: "hue-rotate(130deg) saturate(1.7) brightness(0.9)",
-    swatch: "linear-gradient(135deg,#ff6a5a,#a5160f)",
-  },
-  {
-    id: "sunburst",
-    name: { en: "SUNBURST", fa: "کهربایی" },
-    price: 700,
-    filter: "hue-rotate(186deg) saturate(3.2) brightness(1.45)",
-    swatch: "linear-gradient(135deg,#ffd15a,#e2830c)",
-  },
-  {
-    id: "acid",
-    name: { en: "ACID", fa: "اسیدی" },
-    price: 900,
-    filter: "hue-rotate(216deg) saturate(0.8) brightness(1.75)",
-    swatch: "linear-gradient(135deg,#d4ff6a,#4fa01a)",
-  },
-  {
-    id: "seafoam",
-    name: { en: "SEAFOAM", fa: "دریایی" },
-    price: 1100,
-    filter: "hue-rotate(296deg) saturate(0.8) brightness(1.4)",
-    swatch: "linear-gradient(135deg,#8ffbd0,#158d6a)",
-  },
-  {
-    id: "glacier",
-    name: { en: "GLACIER", fa: "یخی" },
-    price: 1300,
-    filter: "hue-rotate(348deg) saturate(0.8) brightness(1.75)",
-    swatch: "linear-gradient(135deg,#c3ecff,#2f7fd0)",
-  },
-  {
-    id: "ultraviolet",
-    name: { en: "ULTRAVIOLET", fa: "فرابنفش" },
-    price: 1600,
-    filter: "hue-rotate(40deg) saturate(1.7) brightness(0.95)",
-    swatch: "linear-gradient(135deg,#c98cff,#5b21b6)",
-  },
-  {
-    id: "bubblegum",
-    name: { en: "BUBBLEGUM", fa: "آدامسی" },
-    price: 1900,
-    filter: "hue-rotate(106deg) saturate(0.9) brightness(1.4)",
-    swatch: "linear-gradient(135deg,#ffa8d6,#c01a6b)",
-  },
-  {
-    id: "midnight",
-    name: { en: "MIDNIGHT", fa: "نیمه‌شب" },
-    price: 2100,
-    filter: "hue-rotate(-40deg) saturate(1.1) brightness(0.45) contrast(1.15)",
-    swatch: "linear-gradient(135deg,#4a5578,#0d1130)",
-  },
-  {
-    id: "gold",
-    name: { en: "24K GOLD", fa: "طلایی" },
-    price: 2400,
-    filter: "hue-rotate(180deg) saturate(0.9) brightness(1.75)",
-    swatch: "linear-gradient(135deg,#fff0a0,#c98900)",
-  },
-  {
-    id: "chrome",
-    name: { en: "CHROME", fa: "کرومی" },
-    price: 2800,
-    filter: "saturate(0) brightness(1.3) contrast(1.05)",
-    swatch: "linear-gradient(135deg,#ffffff,#8a96b4)",
-  },
+  { id: STOCK_PAINT, name: { en: "FACTORY", fa: "رنگ کارخانه" }, price: 0, hex: "#4f7fd8" },
+  { id: "crimson", name: { en: "CRIMSON", fa: "زرشکی" }, price: 400, hex: "#e02436" },
+  { id: "sunburst", name: { en: "SUNBURST", fa: "کهربایی" }, price: 700, hex: "#f59b18" },
+  { id: "acid", name: { en: "ACID", fa: "اسیدی" }, price: 900, hex: "#a6de2a" },
+  { id: "seafoam", name: { en: "SEAFOAM", fa: "دریایی" }, price: 1100, hex: "#21c39a" },
+  { id: "glacier", name: { en: "GLACIER", fa: "یخی" }, price: 1300, hex: "#5fd4f2" },
+  { id: "ultraviolet", name: { en: "ULTRAVIOLET", fa: "فرابنفش" }, price: 1600, hex: "#9455e8" },
+  { id: "bubblegum", name: { en: "BUBBLEGUM", fa: "آدامسی" }, price: 1900, hex: "#f55fa8" },
+  { id: "midnight", name: { en: "MIDNIGHT", fa: "نیمه‌شب" }, price: 2100, hex: "#223a78" },
+  { id: "gold", name: { en: "24K GOLD", fa: "طلایی" }, price: 2400, hex: "#e8b72a" },
+  { id: "chrome", name: { en: "CHROME", fa: "کرومی" }, price: 2800, hex: "#c9d2e0" },
 ];
 
 /** paint id per car id */
@@ -108,14 +42,56 @@ export function paintById(id: string | undefined): Paint {
   return (id && BY_ID[id]) || BY_ID[STOCK_PAINT];
 }
 
-/** CSS filter for a paint id — empty string when the car wears the factory paint. */
-export function paintFilter(id: string | undefined): string {
-  return paintById(id).filter;
+/* ------------------------------------------------------------------ */
+/* colours                                                             */
+/* ------------------------------------------------------------------ */
+
+function hexToRgb(hex: string): [number, number, number] {
+  const h = hex.replace("#", "");
+  return [parseInt(h.slice(0, 2), 16), parseInt(h.slice(2, 4), 16), parseInt(h.slice(4, 6), 16)];
+}
+
+function mix(hex: string, target: number, amount: number): string {
+  const c = hexToRgb(hex).map((v) => Math.round(v + (target - v) * amount));
+  return `rgb(${c[0]},${c[1]},${c[2]})`;
+}
+
+function rgbToHex(rgb: [number, number, number]): string {
+  return `#${rgb.map((v) => Math.max(0, Math.min(255, v)).toString(16).padStart(2, "0")).join("")}`;
+}
+
+/** The colour a paint shows on a given car (factory paint differs per car). */
+export function paintColor(paint: Paint, carId?: string): string {
+  if (paint.id === STOCK_PAINT && carId && BODY_COLORS[carId]) return rgbToHex(BODY_COLORS[carId]);
+  return paint.hex;
+}
+
+/** Two-stop gradient that represents a paint in the picker. */
+export function paintSwatch(paint: Paint, carId?: string): string {
+  const base = paintColor(paint, carId);
+  return `linear-gradient(135deg, ${mix(base, 255, 0.28)}, ${mix(base, 0, 0.22)})`;
+}
+
+/* ------------------------------------------------------------------ */
+/* filters                                                             */
+/* ------------------------------------------------------------------ */
+
+/**
+ * CSS filter that recolours the sprite of `carId` with `paintId`
+ * (empty string = factory paint / no change).
+ */
+export function paintFilterFor(carId: string, paintId: string | undefined): string {
+  if (!paintId || paintId === STOCK_PAINT) return "";
+  const byCar = PAINT_FILTERS[carId];
+  const combo = (byCar ?? PAINT_FILTERS[Object.keys(PAINT_FILTERS)[0]])?.[paintId];
+  if (!combo) return "";
+  const [deg, sat, bri] = combo;
+  return `hue-rotate(${deg}deg) saturate(${sat}) brightness(${bri})`;
 }
 
 /** Filter string that keeps an extra filter (e.g. a drop shadow) in place. */
-export function paintFilterWith(id: string | undefined, extra: string): string {
-  return [paintFilter(id), extra].filter(Boolean).join(" ");
+export function paintFilterWith(carId: string, paintId: string | undefined, extra: string): string {
+  return [paintFilterFor(carId, paintId), extra].filter(Boolean).join(" ");
 }
 
 export function paintName(id: string | undefined, lang: "en" | "fa"): string {

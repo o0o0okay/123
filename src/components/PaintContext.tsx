@@ -1,5 +1,5 @@
 import { createContext, useContext, type ImgHTMLAttributes, type ReactNode } from "react";
-import { paintFilter, type Paints } from "@/data/paints";
+import { paintFilterFor, type Paints } from "@/data/paints";
 
 const PaintCtx = createContext<Paints>({});
 
@@ -10,7 +10,7 @@ export function PaintProvider({ paints, children }: { paints: Paints; children: 
 
 /** CSS filter that recolours the sprite of `carId` according to its paint ("" when stock). */
 export function usePaintFilter(carId: string): string {
-  return paintFilter(useContext(PaintCtx)[carId]);
+  return paintFilterFor(carId, useContext(PaintCtx)[carId]);
 }
 
 /**

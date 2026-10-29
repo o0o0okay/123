@@ -1,7 +1,7 @@
 import { useState } from "react";
 import { cn } from "@/utils/cn";
 import type { Car } from "@/data/cars";
-import { PAINTS, paintById, paintFilterWith, type Paint } from "@/data/paints";
+import { PAINTS, paintById, paintFilterFor, paintSwatch, type Paint } from "@/data/paints";
 import type { Lang, Strings } from "@/i18n";
 import { CheckIcon, CoinIcon, SprayIcon } from "@/icons";
 import { GameButton, Modal } from "./ui";
@@ -14,11 +14,13 @@ import { GameButton, Modal } from "./ui";
 export function PaintRow({
   t,
   lang,
+  carId,
   paintId,
   onOpen,
 }: {
   t: Strings;
   lang: Lang;
+  carId: string;
   paintId: string;
   onOpen: () => void;
 }) {
@@ -33,7 +35,7 @@ export function PaintRow({
     >
       <span
         className="relative flex h-[46px] w-[46px] shrink-0 items-center justify-center rounded-[12px] border-[3px] border-ink text-ink shadow-[inset_0_2px_0_rgba(255,255,255,0.35),0_3px_0_#0a1038]"
-        style={{ background: paint.swatch }}
+        style={{ background: paintSwatch(paint, carId) }}
       >
         <SprayIcon width={26} height={26} />
       </span>
@@ -104,7 +106,7 @@ export function PaintModal({
       >
         <span
           className="h-[30px] w-[30px] rounded-full border-[2px] border-ink shadow-[inset_0_2px_0_rgba(255,255,255,0.45)]"
-          style={{ background: p.swatch }}
+          style={{ background: paintSwatch(p, car.id) }}
         />
         <span className="w-full truncate text-center font-body text-[9px] font-black leading-none text-white/75">
           {p.name[lang]}
@@ -132,11 +134,13 @@ export function PaintModal({
           alt={car.name}
           draggable={false}
           className="max-h-[128px] w-[300px] animate-pop-in object-contain"
-          style={{ filter: paintFilterWith(sel, "drop-shadow(0 10px 10px rgba(0,0,0,0.5))") }}
+          style={{
+            filter: paintFilterFor(car.id, sel) + " drop-shadow(0 10px 10px rgba(0,0,0,0.5))",
+          }}
         />
         <span
           className="absolute start-[10px] top-[8px] rounded-full border-[2px] border-ink px-[10px] font-body text-[10px] font-black leading-[18px] text-ink"
-          style={{ background: picked.swatch }}
+          style={{ background: paintSwatch(picked, car.id) }}
         >
           {picked.name[lang]}
         </span>

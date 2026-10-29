@@ -47,6 +47,8 @@ interface Props {
   onPrev: () => void;
   onNext: () => void;
   onOpenDealer: () => void;
+  /** opens the coin shop (buy coins with SOL) */
+  onOpenCoinShop: () => void;
   onEquip: (car: Car) => void;
   onStartChase: () => void;
   onLogout: () => void;
@@ -74,6 +76,7 @@ export function WelcomeScreen({
   onPrev,
   onNext,
   onOpenDealer,
+  onOpenCoinShop,
   onEquip,
   onStartChase,
   onLogout,
@@ -130,6 +133,7 @@ export function WelcomeScreen({
           stats={viewStats}
           coins={garage.coins}
           className="px-[24px]"
+          onCoinsClick={onOpenCoinShop}
           labels={{ coins: t.coins, topSpeed: t.topSpeed, armor: t.armor, kmh: t.kmh }}
         />
 

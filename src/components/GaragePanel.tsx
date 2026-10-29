@@ -61,6 +61,8 @@ interface Props {
   onUpgrade: (key: UpgradeKey) => void;
   onCollect: (e: MouseEvent<HTMLButtonElement>) => void;
   onOpenPaint: () => void;
+  /** opens the coin shop from the balance card */
+  onOpenShop?: () => void;
   className?: string;
   showStats?: boolean;
 }
@@ -194,6 +196,7 @@ export function GaragePanel({
   onUpgrade,
   onCollect,
   onOpenPaint,
+  onOpenShop,
   className,
   showStats = true,
 }: Props) {
@@ -243,6 +246,18 @@ export function GaragePanel({
             </div>
           </div>
         </div>
+        {onOpenShop && (
+          <button
+            type="button"
+            id="garage-coin-shop"
+            onClick={onOpenShop}
+            aria-label={t.coinShop}
+            title={t.coinShop}
+            className="flex h-[30px] items-center gap-[4px] rounded-full border-[2.5px] border-ink bg-gradient-to-b from-[#9ef05a] to-[#3d9a1f] px-[10px] font-display text-[13px] leading-none text-white shadow-[0_3px_0_#1f5a10] transition-transform hover:brightness-110 active:translate-y-[2px]"
+          >
+            + {t.coinShop}
+          </button>
+        )}
       </div>
 
       {/* the whole body scrolls as one page, so every section keeps its natural height */}
@@ -434,6 +449,8 @@ export interface GarageData {
   onCollect: (e: MouseEvent<HTMLButtonElement>) => void;
   /** opens the paint picker (rendered by the app shell) */
   onOpenPaint: () => void;
+  /** opens the coin shop from the balance card */
+  onOpenShop?: () => void;
 }
 
 /** Garage tab: picker of owned cars + upgrade panel, inside the floating panel. */

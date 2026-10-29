@@ -12,6 +12,7 @@ import { BottomBar, type TabKey } from "./components/BottomBar";
 import { WelcomeScreen, type Player } from "./components/WelcomeScreen";
 import { DesktopView, type RightTab } from "./components/DesktopView";
 import { WalletModal } from "./components/WalletModal";
+import { CoinShop } from "./components/CoinShop";
 import { ExitDialog, LoadingOverlay, OptionsModal, Toast, type ToastData, type ToastType } from "./components/Overlays";
 import { GameButton, SlotButton } from "./components/ui";
 import { CoinFlyProvider, useCoinFly } from "./components/CoinFlyEffect";
@@ -23,6 +24,7 @@ import { loadPlayer, savePlayer, levelsOf, paintOf, ZERO_LEVELS, type PlayerStat
 import { useSfx, useViewport } from "./hooks";
 import { detectWallets, generateDemoAddress, type SolanaWalletInfo } from "./solana";
 import { TASKS, type TaskMetric } from "./data/tasks";
+import type { CoinPack } from "./data/coinPacks";
 import { claimDaily, DEFAULT_DAILY, resolveDaily } from "./data/daily";
 import { TasksView, type TaskView } from "./components/TasksPanel";
 import { RaceView, type RaceProps } from "./components/RacePanel";
@@ -93,6 +95,7 @@ function AppContent({
   const [dealerOpen, setDealerOpen] = useState(false);
   const [sellTarget, setSellTarget] = useState<Car | null>(null);
   /** active race: mode + (null while running) result */
+  const [coinShopOpen, setCoinShopOpen] = useState(false);
   const [raceMode, setRaceMode] = useState<RaceMode | null>(null);
   const [raceResult, setRaceResult] = useState<RaceResult | null>(null);
   const raceTimer = useRef<number | null>(null);
@@ -252,6 +255,28 @@ function AppContent({
   const closeDealer = () => {
     sfx("click");
     setDealerOpen(false);
+  };
+
+  /* ---------------- coin shop (buy coins with SOL) ---------------- */
+  const openCoinShop = () => {
+    sfx("click");
+    setCoinShopOpen(true);
+  };
+
+  const closeCoinShop = () => {
+    sfx("click");
+    setCoinShopOpen(false);
+  };
+
+  /** called by the coin shop once a payment is confirmed */
+  const purchasePack = (pack: CoinPack) => {
+    sfx("coinJingle");
+    setPlayerState((p) => ({ ...p, coins: p.coins + pack.coins }));
+    triggerCoinFly({
+      amount: pack.coins,
+      targetId: isDesktop ? "desktop-top-coin-badge" : "mobile-top-coin-badge",
+    });
+    showToast(fmt(t.packPurchased, { n: pack.coins.toLocaleString("en-US") }), "success");
   };
 
   const sellValueOf = (car: Car) => sellValue(car, levelsOf(playerState, car.id));
@@ -639,6 +664,7 @@ function AppContent({
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
       if (e.key === "Escape") {
+        if (coinShopOpen) return setCoinShopOpen(false);
         if (sellTarget) return setSellTarget(null);
         if (buyTarget) return setBuyTarget(null);
         if (paintOpen) return setPaintOpen(false);
@@ -656,7 +682,18 @@ function AppContent({
         }
         return;
       }
-      if (exitOpen || walletModalOpen || draftSettings || screen === "loading" || raceMode || dealerOpen || sellTarget || paintOpen) return;
+      if (
+        exitOpen ||
+        walletModalOpen ||
+        draftSettings ||
+        screen === "loading" ||
+        raceMode ||
+        dealerOpen ||
+        coinShopOpen ||
+        sellTarget ||
+        paintOpen
+      )
+        return;
       if (!isDesktop && tab !== "cars") return;
       if (e.key === "ArrowLeft") changeCar(-1);
       else if (e.key === "ArrowRight") changeCar(1);
@@ -683,6 +720,7 @@ function AppContent({
     onUpgrade: upgrade,
     onCollect: collectReward,
     onOpenPaint: openPaint,
+    onOpenShop: openCoinShop,
   };
 
   const race: RaceProps = {
@@ -769,6 +807,7 @@ function AppContent({
         <StatsRow
           stats={activeStats}
           coins={coins}
+          onCoinsClick={openCoinShop}
           labels={{ coins: t.coins, topSpeed: t.topSpeed, armor: t.armor, kmh: t.kmh }}
         />
         <div className="flex items-center justify-between rounded-full border-[3px] border-ink bg-navy-950/90 px-[16px] py-[5px] shadow-[inset_0_2px_0_rgba(255,255,255,0.06)]">
@@ -862,6 +901,7 @@ function AppContent({
           onPrev={() => changeCar(-1)}
           onNext={() => changeCar(1)}
           onOpenDealer={openDealer}
+          onOpenCoinShop={openCoinShop}
           onEquip={equip}
           screen={screen}
           player={player}
@@ -908,6 +948,7 @@ function AppContent({
           onPrev={() => changeCar(-1)}
           onNext={() => changeCar(1)}
           onOpenDealer={openDealer}
+          onOpenCoinShop={openCoinShop}
           onEquip={equip}
           onStartChase={startChase}
           onLogout={logout}
@@ -949,6 +990,18 @@ function AppContent({
           onEquip={equip}
           onClose={closeDealer}
           onSfx={(n) => sfx(n)}
+        />
+      )}
+
+      {/* coin shop: packs + Solana checkout */}
+      {coinShopOpen && (
+        <CoinShop
+          t={t}
+          coins={coins}
+          walletAddress={player && player.provider !== "Demo Wallet" ? player.walletAddress : undefined}
+          wide={isDesktop}
+          onPurchase={purchasePack}
+          onClose={closeCoinShop}
         />
       )}
 

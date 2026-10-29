@@ -57,7 +57,7 @@ function Row({
         {wins && <TrophyIcon width={12} height={12} className="shrink-0 text-amber-400" />}
         <span
           className={cn(
-            "font-display text-[17px] leading-none tabular-nums",
+            "font-display text-[15px] leading-none tabular-nums sm:text-[17px]",
             wins ? "text-mint-400" : "text-white/85",
           )}
         >
@@ -70,7 +70,7 @@ function Row({
           </span>
         )}
         {!wins && v !== other && delta > 0 && (
-          <span className="font-body text-[9px] font-black text-white/25">−{num(delta)}</span>
+          <span className="hidden font-body text-[9px] font-black text-white/25 sm:inline">−{num(delta)}</span>
         )}
       </div>
       {max !== undefined && (
@@ -87,7 +87,7 @@ function Row({
   return (
     <div className="flex items-center gap-[8px] rounded-[12px] border-[2.5px] border-ink bg-navy-950/55 px-[10px] py-[6px]">
       {cell(a, aWins, b)}
-      <div className="flex w-[92px] shrink-0 flex-col items-center gap-[1px] text-center">
+      <div className="flex w-[62px] shrink-0 flex-col items-center gap-[1px] text-center sm:w-[92px]">
         <span className="flex items-center gap-[4px] font-body text-[9px] font-black leading-none tracking-wider text-white/50">
           {icon}
           {label}
@@ -104,12 +104,12 @@ function Row({
 
 function TextRow({ label, a, b, icon }: { label: string; a: string; b: string; icon?: ReactNode }) {
   const cell = (v: string) => (
-    <div className="min-w-0 flex-1 truncate text-start font-display text-[15px] leading-none text-white/85">{v}</div>
+    <div className="min-w-0 flex-1 truncate text-start font-display text-[14px] leading-none text-white/85 sm:text-[15px]">{v}</div>
   );
   return (
     <div className="flex items-center gap-[8px] rounded-[12px] border-[2.5px] border-ink bg-navy-950/40 px-[10px] py-[5px]">
       {cell(a)}
-      <div className="flex w-[92px] shrink-0 items-center justify-center gap-[4px] font-body text-[9px] font-black tracking-wider text-white/40">
+      <div className="flex w-[62px] shrink-0 items-center justify-center gap-[4px] font-body text-[9px] font-black tracking-wider text-white/40 sm:w-[92px]">
         {icon}
         {label}
       </div>

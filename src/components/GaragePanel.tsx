@@ -243,10 +243,6 @@ export function GaragePanel({
             </div>
           </div>
         </div>
-        <div className="text-end">
-          <div className="font-body text-[10px] font-black tracking-wider text-white/50">{t.collected}</div>
-          <div className="font-display text-[18px] leading-none text-mint-400">{t.runReward}</div>
-        </div>
       </div>
 
       {/* the whole body scrolls as one page, so every section keeps its natural height */}
@@ -256,38 +252,28 @@ export function GaragePanel({
           ref={scrollRef}
           className="thin-scroll flex h-full flex-col gap-[9px] overflow-y-auto pb-[6px] pe-[4px] pt-[9px]"
         >
-          {/* run reward */}
-          <button
-            type="button"
-            onClick={onCollect}
-            disabled={runReward <= 0}
-            className={cn(
-              "flex shrink-0 items-center justify-between rounded-[16px] border-[3px] border-ink px-[14px] py-[8px] transition-transform active:translate-y-[2px]",
-              runReward > 0
-                ? "bg-gradient-to-r from-[#ffd23a] to-[#ff9a1f] shadow-[0_4px_0_#b96a08] animate-glow"
-                : "bg-navy-950/60",
-            )}
-          >
-            <div className="text-start">
-              <div className="font-body text-[10px] font-black tracking-wider text-ink/70">{t.lastChase}</div>
-              <div
-                className={cn(
-                  "font-display text-[22px] leading-none",
-                  runReward > 0 ? "text-ink" : "text-white/30",
-                )}
-              >
-                +{runReward.toLocaleString("en-US")}
-              </div>
-            </div>
-            <span
-              className={cn(
-                "rounded-full border-[3px] border-ink px-[14px] py-[4px] font-display text-[15px]",
-                runReward > 0 ? "bg-mint-500 text-ink shadow-[0_2px_0_#1b7a42]" : "bg-navy-900 text-white/30",
-              )}
+          {/* run reward — the row disappears entirely once it is collected */}
+          {runReward > 0 && (
+            <button
+              type="button"
+              id="garage-collect"
+              onClick={onCollect}
+              className="flex shrink-0 items-center justify-between gap-[10px] rounded-[16px] border-[3px] border-ink bg-gradient-to-r from-[#ffd23a] to-[#ff9a1f] px-[12px] py-[7px] shadow-[0_4px_0_#b96a08] animate-glow transition-transform active:translate-y-[2px]"
             >
-              {t.collect}
-            </span>
-          </button>
+              <span className="flex min-w-0 items-center gap-[6px]">
+                <CoinIcon width={20} height={20} className="shrink-0" />
+                <span className="font-display text-[22px] leading-none text-ink" dir="ltr">
+                  +{runReward.toLocaleString("en-US")}
+                </span>
+                <span className="truncate font-body text-[9px] font-black tracking-wider text-ink/55">
+                  {t.lastChase}
+                </span>
+              </span>
+              <span className="shrink-0 rounded-full border-[3px] border-ink bg-mint-500 px-[13px] py-[3px] font-display text-[15px] leading-none text-ink shadow-[0_2px_0_#1b7a42]">
+                {t.collect}
+              </span>
+            </button>
+          )}
 
           {/* live stats */}
           {showStats && (

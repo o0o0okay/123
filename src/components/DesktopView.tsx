@@ -358,27 +358,28 @@ function DriverPanel(p: DesktopViewProps) {
         ))}
       </div>
 
-      <button
-        type="button"
-        onClick={garage.onCollect}
-        disabled={garage.runReward <= 0}
-        className={cn(
-          "mt-[12px] flex w-full items-center justify-between rounded-[14px] border-[3px] border-ink px-[14px] py-[7px] transition-transform active:translate-y-[2px]",
-          garage.runReward > 0 ? "bg-gradient-to-r from-[#ffd23a] to-[#ff9a1f] shadow-[0_4px_0_#b96a08]" : "bg-navy-950/60",
-        )}
-      >
-        <span className={cn("flex items-center gap-[6px] font-display text-[17px]", garage.runReward > 0 ? "text-ink" : "text-white/30")}>
-          <CoinIcon width={18} height={18} />+{garage.runReward.toLocaleString("en-US")}
-        </span>
-        <span
-          className={cn(
-            "rounded-full border-[3px] border-ink px-[12px] py-[2px] font-display text-[14px]",
-            garage.runReward > 0 ? "bg-mint-500 text-ink" : "bg-navy-900 text-white/30",
-          )}
+      {/* run reward — hidden completely when there is nothing to collect */}
+      {garage.runReward > 0 && (
+        <button
+          type="button"
+          id="driver-collect"
+          onClick={garage.onCollect}
+          className="mt-[12px] flex w-full items-center justify-between gap-[8px] rounded-[14px] border-[3px] border-ink bg-gradient-to-r from-[#ffd23a] to-[#ff9a1f] px-[12px] py-[7px] shadow-[0_4px_0_#b96a08] transition-transform active:translate-y-[2px]"
         >
-          {t.collect}
-        </span>
-      </button>
+          <span className="flex min-w-0 items-center gap-[5px]">
+            <CoinIcon width={18} height={18} className="shrink-0" />
+            <span className="font-display text-[18px] leading-none text-ink" dir="ltr">
+              +{garage.runReward.toLocaleString("en-US")}
+            </span>
+            <span className="truncate font-body text-[9px] font-black tracking-wider text-ink/55">
+              {t.lastChase}
+            </span>
+          </span>
+          <span className="shrink-0 rounded-full border-[3px] border-ink bg-mint-500 px-[11px] py-[2px] font-display text-[14px] leading-none text-ink shadow-[0_2px_0_#1b7a42]">
+            {t.collect}
+          </span>
+        </button>
+      )}
 
       <button
         type="button"

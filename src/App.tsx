@@ -4,6 +4,8 @@ import { TitleBanner } from "./components/TitleBanner";
 import { CarShowcase } from "./components/CarShowcase";
 import { GarageView, type GarageData } from "./components/GaragePanel";
 import { BuyConfirmModal } from "./components/BuyConfirmModal";
+import { PaintModal } from "./components/PaintShop";
+import { PaintProvider } from "./components/PaintContext";
 import { NewsPanel } from "./components/NewsPanel";
 import { StatPills, StatsRow } from "./components/Stats";
 import { BottomBar, type TabKey } from "./components/BottomBar";
@@ -14,9 +16,10 @@ import { ExitDialog, LoadingOverlay, OptionsModal, Toast, type ToastData, type T
 import { GameButton, SlotButton } from "./components/ui";
 import { CoinFlyProvider, useCoinFly } from "./components/CoinFlyEffect";
 import { cars, carStats, sellValue, upgradeCost, MAX_LEVEL, type Car, type UpgradeKey } from "./data/cars";
+import { paintById } from "./data/paints";
 import { fmt, strings } from "./i18n";
 import { loadSettings, saveSettings, type Settings } from "./settings";
-import { loadPlayer, savePlayer, levelsOf, ZERO_LEVELS, type PlayerState } from "./player";
+import { loadPlayer, savePlayer, levelsOf, paintOf, ZERO_LEVELS, type PlayerState } from "./player";
 import { useSfx, useViewport } from "./hooks";
 import { detectWallets, generateDemoAddress, type SolanaWalletInfo } from "./solana";
 import { TASKS, type TaskMetric } from "./data/tasks";
@@ -83,6 +86,8 @@ function AppContent({
   const [playerState, setPlayerState] = useState<PlayerState>(loadPlayer);
   /** car waiting for purchase confirmation */
   const [buyTarget, setBuyTarget] = useState<Car | null>(null);
+  /** paint picker modal (garage) */
+  const [paintOpen, setPaintOpen] = useState(false);
   /** dealership overlay + car waiting for sale confirmation */
   const [dealerOpen, setDealerOpen] = useState(false);
   const [sellTarget, setSellTarget] = useState<Car | null>(null);
@@ -108,6 +113,7 @@ function AppContent({
   const activeCar = cars.find((c) => c.id === playerState.activeCarId) ?? ownedCars[0] ?? cars[0];
   const activeLevels = levelsOf(playerState, activeCar.id);
   const activeStats = carStats(activeCar, activeLevels);
+  const activePaint = paintOf(playerState, activeCar.id);
   /** position of the driven car inside the owned-cars carousel */
   const activeIdx = Math.max(0, ownedCars.findIndex((c) => c.id === activeCar.id));
 
@@ -264,12 +270,15 @@ function AppContent({
       const nextOwned = p.owned.filter((id) => id !== car.id);
       const upgrades = { ...p.upgrades };
       delete upgrades[car.id];
+      const paints = { ...p.paints };
+      delete paints[car.id];
       return {
         ...p,
         coins: p.coins + value,
         owned: nextOwned,
         activeCarId: p.activeCarId === car.id ? nextOwned[0] : p.activeCarId,
         upgrades,
+        paints,
       };
     });
     setSellTarget(null);
@@ -298,6 +307,30 @@ function AppContent({
     });
     bumpTask("upgrade");
     showToast(fmt(t.upgraded, { p: t[UPG_NAME[key]], l: level + 1 }), "success");
+  };
+
+  /* ---------------- garage: paint job ---------------- */
+  const openPaint = () => {
+    sfx("click");
+    setPaintOpen(true);
+  };
+
+  /** Spray a paint on the driven car; every paint job costs coins. */
+  const applyPaint = (paintId: string) => {
+    const paint = paintById(paintId);
+    if (paintOf(playerState, activeCar.id) === paint.id) return;
+    if (coins < paint.price) {
+      sfx("error");
+      showToast(t.notEnoughCoins, "error");
+      return;
+    }
+    sfx("coinJingle");
+    setPlayerState((p) => ({
+      ...p,
+      coins: p.coins - paint.price,
+      paints: { ...p.paints, [activeCar.id]: paint.id },
+    }));
+    showToast(fmt(t.painted, { c: paint.name[lang], p: paint.price.toLocaleString("en-US") }), "success");
   };
 
   const collectReward = (e?: MouseEvent<HTMLButtonElement>) => {
@@ -569,6 +602,7 @@ function AppContent({
       if (e.key === "Escape") {
         if (sellTarget) return setSellTarget(null);
         if (buyTarget) return setBuyTarget(null);
+        if (paintOpen) return setPaintOpen(false);
         if (dealerOpen) return setDealerOpen(false);
         if (exitOpen) return setExitOpen(false);
         if (walletModalOpen) return setWalletModalOpen(false);
@@ -583,7 +617,7 @@ function AppContent({
         }
         return;
       }
-      if (exitOpen || walletModalOpen || draftSettings || screen === "loading" || raceMode || dealerOpen || sellTarget) return;
+      if (exitOpen || walletModalOpen || draftSettings || screen === "loading" || raceMode || dealerOpen || sellTarget || paintOpen) return;
       if (!isDesktop && tab !== "cars") return;
       if (e.key === "ArrowLeft") changeCar(-1);
       else if (e.key === "ArrowRight") changeCar(1);
@@ -602,11 +636,14 @@ function AppContent({
 
   const garage: GarageData = {
     car: activeCar,
+    lang,
     levels: activeLevels,
     coins,
     runReward: playerState.runReward,
+    paintId: activePaint,
     onUpgrade: upgrade,
     onCollect: collectReward,
+    onOpenPaint: openPaint,
   };
 
   const race: RaceProps = {
@@ -755,6 +792,7 @@ function AppContent({
   /* ----------------------------- render ---------------------------- */
   return (
     <GameCanvas lang={liveSettings.lang} viewport={viewport}>
+      <PaintProvider paints={playerState.paints}>
       {isDesktop ? (
         <DesktopView
           t={t}
@@ -875,6 +913,22 @@ function AppContent({
         />
       )}
 
+      {/* paint picker */}
+      {paintOpen && (
+        <PaintModal
+          t={t}
+          lang={lang}
+          car={activeCar}
+          paintId={activePaint}
+          coins={coins}
+          onApply={applyPaint}
+          onClose={() => {
+            sfx("click");
+            setPaintOpen(false);
+          }}
+        />
+      )}
+
       {/* sale confirmation */}
       {sellTarget && (
         <SellConfirmModal
@@ -928,6 +982,7 @@ function AppContent({
         />
       )}
       <Toast toast={toast} className={isDesktop ? "bottom-[150px]" : undefined} />
+      </PaintProvider>
     </GameCanvas>
   );
 }

@@ -5,6 +5,7 @@ import type { Settings } from "@/settings";
 import type { Car } from "@/data/cars";
 import { policeCar } from "@/data/cars";
 import { CheckIcon, CloseIcon, GlobeIcon, InfoIcon, MusicIcon, PoliceLightIcon, SpeakerIcon, VibrateIcon } from "@/icons";
+import { PaintedImg } from "./PaintContext";
 import { GameButton, Modal, Segmented, Toggle } from "./ui";
 
 /* ------------------------------------------------------------------ */
@@ -149,10 +150,12 @@ export function LoadingOverlay({ t, car, onDone }: { t: Strings; car: Car; onDon
           alt=""
           className="absolute bottom-[16px] left-0 w-[190px] animate-[slide-up_0.5s_ease-out] opacity-95 drop-shadow-[0_8px_10px_rgba(0,0,0,0.4)]"
         />
-        <img
+        <PaintedImg
+          carId={car.id}
+          shadow="drop-shadow(0 10px 12px rgba(0,0,0,0.45))"
           src={car.image}
           alt=""
-          className="absolute bottom-[30px] right-0 w-[220px] animate-bob drop-shadow-[0_10px_12px_rgba(0,0,0,0.45)]"
+          className="absolute bottom-[30px] right-0 w-[220px] animate-bob"
         />
         <span className="absolute right-[30px] top-[6px] font-display text-[26px] text-[#ff4f1f] t-stroke sw-5">SIREN!</span>
       </div>

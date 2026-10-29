@@ -2,6 +2,7 @@ import { cn } from "@/utils/cn";
 import type { Car } from "@/data/cars";
 import { fmt, type Lang, type Strings } from "@/i18n";
 import { CartIcon, CoinIcon } from "@/icons";
+import { PaintedImg } from "./PaintContext";
 import { GameButton, Modal } from "./ui";
 
 /** Confirmation dialog shown before a car is bought (used by the dealership). */
@@ -31,10 +32,12 @@ export function BuyConfirmModal({
     <Modal title={t.buyTitle} onClose={onClose} width={400}>
       <div className="flex flex-col items-center">
         <div className="relative flex h-[130px] w-[280px] items-center justify-center rounded-[18px] border-[3px] border-ink bg-[radial-gradient(ellipse_at_center,#3d8ff5,#14204f_75%)]">
-          <img
+          <PaintedImg
+            carId={car.id}
+            shadow="drop-shadow(0 8px 8px rgba(0,0,0,0.5))"
             src={car.image}
             alt={car.name}
-            className="max-h-[118px] w-[250px] animate-pop-in object-contain drop-shadow-[0_8px_8px_rgba(0,0,0,0.5)]"
+            className="max-h-[118px] w-[250px] animate-pop-in object-contain"
           />
         </div>
         <div className="mt-[8px] font-display text-[30px] leading-none text-white t-stroke sw-4">{car.name}</div>

@@ -21,6 +21,7 @@ import {
   TireIcon,
   UndoIcon,
 } from "@/icons";
+import { PaintedImg } from "./PaintContext";
 import { GameButton, Modal, Toggle } from "./ui";
 
 export type SortKey = "price-asc" | "price-desc" | "pp-asc" | "pp-desc" | "bhp-desc" | "name-asc" | "year-desc";
@@ -628,11 +629,13 @@ export function Dealership({
             </div>
           </div>
           <div className={cn("relative my-[3px] flex w-full items-center justify-center", desk ? "h-[62px]" : "h-[76px]")}>
-            <img
+            <PaintedImg
+              carId={car.id}
+              shadow="drop-shadow(0 5px 4px rgba(0,0,0,0.5))"
               src={car.image}
               alt=""
               draggable={false}
-              className="max-h-full max-w-[94%] object-contain drop-shadow-[0_5px_4px_rgba(0,0,0,0.5)]"
+              className="max-h-full max-w-[94%] object-contain"
             />
           </div>
           <div className={cn("flex items-center justify-center gap-[4px] font-display text-[17px] italic leading-none", priceClass)} dir="ltr">
@@ -700,7 +703,7 @@ export function Dealership({
           desk ? "h-[56px] w-[96px]" : "h-[48px] w-[74px]",
         )}
       >
-        <img src={selected.image} alt="" className="max-h-[88%] max-w-[90%] object-contain" />
+        <PaintedImg carId={selected.id} src={selected.image} alt="" className="max-h-[88%] max-w-[90%] object-contain" />
       </div>
       <div className="min-w-0 flex-1">
         <div className="flex items-center gap-[6px]" dir="ltr">
@@ -945,10 +948,12 @@ export function SellConfirmModal({
     <Modal title={t.sellTitle} onClose={onClose} width={400}>
       <div className="flex flex-col items-center">
         <div className="relative flex h-[120px] w-[270px] items-center justify-center rounded-[18px] border-[3px] border-ink bg-[radial-gradient(ellipse_at_center,#b8321c,#14204f_75%)]">
-          <img
+          <PaintedImg
+            carId={car.id}
+            shadow="drop-shadow(0 8px 8px rgba(0,0,0,0.5))"
             src={car.image}
             alt={car.name}
-            className="max-h-[108px] w-[240px] animate-pop-in object-contain drop-shadow-[0_8px_8px_rgba(0,0,0,0.5)]"
+            className="max-h-[108px] w-[240px] animate-pop-in object-contain"
           />
           <span className="absolute -right-[10px] -top-[10px] flex h-[34px] w-[34px] items-center justify-center rounded-full border-[3px] border-ink bg-gradient-to-b from-[#ff6b4a] to-[#c92a12] text-white">
             <TagIcon width={17} height={17} />

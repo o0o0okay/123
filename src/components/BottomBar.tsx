@@ -1,6 +1,7 @@
 import type { ReactNode } from "react";
 import { cn } from "@/utils/cn";
 import type { Car } from "@/data/cars";
+import { PaintedImg } from "./PaintContext";
 import { ClipboardIcon, FlagIcon, GearIcon, MegaphoneIcon, UndoIcon } from "@/icons";
 
 export function CarFace({ car, size = 64, className }: { car: Car; size?: number; className?: string }) {
@@ -8,7 +9,8 @@ export function CarFace({ car, size = 64, className }: { car: Car; size?: number
   const h = w * (car.imgH / car.imgW);
   return (
     <div className={cn("relative overflow-hidden rounded-full bg-navy-700", className)} style={{ width: size, height: size }}>
-      <img
+      <PaintedImg
+        carId={car.id}
         src={car.image}
         alt=""
         draggable={false}

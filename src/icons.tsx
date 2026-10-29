@@ -531,3 +531,15 @@ export const TagIcon = (p: P) => (
     <circle cx="7.5" cy="7.5" r="1.8" fill="#0f1535" />
   </Svg>
 );
+
+export const SprayIcon = (p: P) => (
+  <Svg {...p}>
+    <rect x="7" y="8" width="6.4" height="13" rx="2.2" />
+    <rect x="8.6" y="5.4" width="3.2" height="2.6" rx="0.8" />
+    <rect x="8" y="2.6" width="4.4" height="2.2" rx="1" />
+    <circle cx="16.4" cy="3.6" r="1.15" />
+    <circle cx="19.6" cy="6.4" r="1.05" />
+    <circle cx="16.6" cy="8.2" r="0.95" />
+    <circle cx="20.2" cy="10.6" r="1.15" />
+  </Svg>
+);

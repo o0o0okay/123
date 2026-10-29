@@ -1,5 +1,6 @@
 import { cn } from "@/utils/cn";
 import type { Car } from "@/data/cars";
+import { PaintedImg } from "./PaintContext";
 import { ArrowButton } from "./ui";
 
 interface Props {
@@ -46,12 +47,14 @@ export function CarShowcase({ car, onPrev, onNext, variant = "mobile", hasMultip
           )}
         />
         <div className="relative w-full animate-bob">
-          <img
+          <PaintedImg
             key={car.id}
+            carId={car.id}
+            shadow="drop-shadow(0 14px 12px rgba(8,20,90,0.5))"
             src={car.image}
             alt={car.name}
             draggable={false}
-            className="max-h-full w-full max-w-none animate-pop-in object-contain drop-shadow-[0_14px_12px_rgba(8,20,90,0.5)]"
+            className="max-h-full w-full max-w-none animate-pop-in object-contain"
           />
         </div>
       </div>

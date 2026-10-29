@@ -6,6 +6,7 @@ import { ordinal, type RaceMode, type RaceResult } from "@/data/races";
 import { fmt, type Lang, type Strings } from "@/i18n";
 import { CoinIcon, FlagIcon, SkullIcon, StarBurstIcon, TrophyIcon, UndoIcon } from "@/icons";
 import { RACE_ICONS } from "./RacePanel";
+import { PaintedImg } from "./PaintContext";
 import { GameButton } from "./ui";
 
 interface Props {
@@ -88,11 +89,13 @@ export function RaceOverlay({ t, lang, mode, car, result, onCollect, onAgain, on
               />
             )}
             {/* player */}
-            <img
+            <PaintedImg
+              carId={car.id}
+              shadow="drop-shadow(0 8px 8px rgba(0,0,0,0.55))"
               src={car.image}
               alt={car.name}
               className={cn(
-                "absolute bottom-[22px] w-[190px] drop-shadow-[0_8px_8px_rgba(0,0,0,0.55)] transition-all duration-700 car-shake",
+                "absolute bottom-[22px] w-[190px] transition-all duration-700 car-shake",
                 isPursuit ? "left-[48%]" : isDuel ? (stage >= 2 ? "left-[30%]" : "left-[10%]") : stage >= 2 ? "left-[50%]" : stage >= 1 ? "left-[30%]" : "left-[14%]",
               )}
             />

@@ -1,5 +1,6 @@
 import type { UpgradeKey } from "./data/cars";
 import { MAX_LEVEL, cars } from "./data/cars";
+import { STOCK_PAINT, type Paints } from "./data/paints";
 import { DEFAULT_TASK_PROGRESS, type TaskProgress } from "./data/tasks";
 
 export interface PlayerState {
@@ -9,6 +10,8 @@ export interface PlayerState {
   /** ids of cars bought in the shop */
   owned: string[];
   upgrades: Record<string, Partial<Record<UpgradeKey, number>>>;
+  /** paint id sprayed on each owned car (missing = factory paint) */
+  paints: Paints;
   /** pending coins from the last chase, collectable in the garage */
   runReward: number;
   /** stored progress for mission metrics */
@@ -32,6 +35,7 @@ export const DEFAULT_PLAYER: PlayerState = {
   upgrades: {
     comet: { engine: 2, body: 1, tires: 0, nitro: 0 },
   },
+  paints: {},
   runReward: 2400,
   taskProgress: { ...DEFAULT_TASK_PROGRESS },
   tasksClaimed: [],
@@ -62,6 +66,7 @@ export function loadPlayer(): PlayerState {
       owned,
       activeCarId,
       upgrades: { ...DEFAULT_PLAYER.upgrades, ...(parsed.upgrades ?? {}) },
+      paints: { ...(parsed.paints ?? {}) },
       taskProgress: { ...DEFAULT_TASK_PROGRESS, ...(parsed.taskProgress ?? {}) },
       tasksClaimed: Array.isArray(parsed.tasksClaimed) ? parsed.tasksClaimed : [],
       raceWins: { ...(parsed.raceWins ?? {}) },
@@ -81,6 +86,11 @@ export function savePlayer(p: PlayerState) {
 }
 
 export const ZERO_LEVELS: Record<UpgradeKey, number> = { engine: 0, body: 0, tires: 0, nitro: 0 };
+
+/** Paint currently worn by a car (factory paint when never sprayed). */
+export function paintOf(p: PlayerState, carId: string): string {
+  return p.paints?.[carId] ?? STOCK_PAINT;
+}
 
 export function levelsOf(p: PlayerState, carId: string): Record<UpgradeKey, number> {
   const raw = p.upgrades[carId] ?? {};

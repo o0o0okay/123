@@ -2,10 +2,12 @@ import type { MouseEvent, ReactNode } from "react";
 import { cn } from "@/utils/cn";
 import type { Car, UpgradeKey } from "@/data/cars";
 import { UPGRADES, carStats, upgradeCost, MAX_LEVEL } from "@/data/cars";
-import type { Strings } from "@/i18n";
+import type { Lang, Strings } from "@/i18n";
 import { useAnimatedNumber } from "@/hooks";
 import { useCoinFly } from "./CoinFlyEffect";
 import { BumperIcon, CoinIcon, EngineIcon, GaugeIcon, NitroIcon, PowerIcon, TireIcon } from "@/icons";
+import { PaintRow } from "./PaintShop";
+import { usePaintFilter } from "./PaintContext";
 import { FloatingPanel } from "./ui";
 
 const ICONS: Record<UpgradeKey, ReactNode> = {
@@ -38,12 +40,16 @@ const COLORS: Record<UpgradeKey, string> = {
 
 interface Props {
   t: Strings;
+  lang: Lang;
   car: Car;
   levels: Record<UpgradeKey, number>;
   coins: number;
   runReward: number;
+  /** paint currently sprayed on the car */
+  paintId: string;
   onUpgrade: (key: UpgradeKey) => void;
   onCollect: (e: MouseEvent<HTMLButtonElement>) => void;
+  onOpenPaint: () => void;
   className?: string;
   showStats?: boolean;
 }
@@ -146,12 +152,15 @@ function UpgradeRow({
 /** The garage: coin balance, run reward, live stats and the four upgrade rows. */
 export function GaragePanel({
   t,
+  lang,
   car,
   levels,
   coins,
   runReward,
+  paintId,
   onUpgrade,
   onCollect,
+  onOpenPaint,
   className,
   showStats = true,
 }: Props) {
@@ -253,6 +262,9 @@ export function GaragePanel({
         </div>
       )}
 
+      {/* paint shop */}
+      <PaintRow t={t} lang={lang} paintId={paintId} onOpen={onOpenPaint} />
+
       {/* upgrade rows */}
       <div className="no-scrollbar min-h-0 flex-1 space-y-[8px] overflow-y-auto pe-[2px]">
         {UPGRADES.map((u) => (
@@ -276,6 +288,14 @@ export function GaragePanel({
         <span className="font-display text-[24px] leading-none text-white t-stroke sw-4">{stats.power}</span>
       </div>
     </div>
+  );
+}
+
+/** Car thumbnail that respects the paint sprayed on that car. */
+function PickThumb({ car }: { car: Car }) {
+  const filter = usePaintFilter(car.id);
+  return (
+    <img src={car.image} alt={car.name} className="h-[80%] w-full object-contain" draggable={false} style={{ filter: filter || undefined }} />
   );
 }
 
@@ -307,7 +327,7 @@ export function CarPicker({
                 : "border-ink bg-navy-950/70 opacity-75 hover:opacity-100",
             )}
           >
-            <img src={c.image} alt={c.name} className="h-[80%] w-full object-contain" draggable={false} />
+            <PickThumb car={c} />
             <span
               className={cn(
                 "absolute -bottom-[9px] rounded-full border-[2px] border-ink px-[6px] py-[1px] font-body text-[8px] font-black",
@@ -326,11 +346,16 @@ export function CarPicker({
 /** Garage data coming from the app state (always refers to an OWNED car). */
 export interface GarageData {
   car: Car;
+  lang: Lang;
   levels: Record<UpgradeKey, number>;
   coins: number;
   runReward: number;
+  /** paint currently sprayed on the car */
+  paintId: string;
   onUpgrade: (key: UpgradeKey) => void;
   onCollect: (e: MouseEvent<HTMLButtonElement>) => void;
+  /** opens the paint picker (rendered by the app shell) */
+  onOpenPaint: () => void;
 }
 
 /** Garage tab: picker of owned cars + upgrade panel, inside the floating panel. */

@@ -161,6 +161,17 @@ const en = {
   select: "SELECT",
   selected: "SELECTED",
 
+  /* ---------- paint shop ---------- */
+  paintShop: "PAINT SHOP",
+  paintTitle: "CAR PAINT",
+  paintCurrent: "PAINTED",
+  paintApply: "PAINT",
+  paintApplied: "SPRAYED",
+  paintHint: "Every paint job costs coins",
+  paintNoCoins: "NEED MORE COINS",
+  changeColor: "CHANGE",
+  painted: "{c} paint applied · −{p} coins",
+
   /* ---------- actions / screens ---------- */
   startChase: "START CHASE",
   connecting: "CONNECTING TO SOLANA...",
@@ -379,6 +390,16 @@ const fa: Strings = {
   carSelected: "{n} آماده‌ی راه است",
   select: "انتخاب",
   selected: "انتخاب شده",
+
+  paintShop: "رنگ‌آمیزی",
+  paintTitle: "رنگ خودرو",
+  paintCurrent: "رنگ فعلی",
+  paintApply: "رنگ کن",
+  paintApplied: "رنگ شد",
+  paintHint: "هر بار رنگ کردن سکه می‌برد",
+  paintNoCoins: "سکه کافی نیست",
+  changeColor: "تغییر",
+  painted: "رنگ {c} زده شد · {p} سکه کم شد",
 
   startChase: "شروع فرار",
   connecting: "اتصال به سولانا...",

@@ -1,7 +1,7 @@
 import type { ReactNode } from "react";
 import { cn } from "@/utils/cn";
 import type { Car } from "@/data/cars";
-import { CartIcon, ClipboardIcon, FlagIcon, GearIcon, MegaphoneIcon, UndoIcon } from "@/icons";
+import { ClipboardIcon, FlagIcon, GearIcon, MegaphoneIcon, UndoIcon } from "@/icons";
 
 export function CarFace({ car, size = 64, className }: { car: Car; size?: number; className?: string }) {
   const w = size * car.face.zoom;
@@ -64,14 +64,14 @@ function Tab({
   );
 }
 
-export type TabKey = "cars" | "race" | "shop" | "garage" | "tasks" | "news";
+export type TabKey = "cars" | "race" | "garage" | "tasks" | "news";
 
 interface Props {
   car: Car;
   tab: TabKey;
   onTab: (t: TabKey) => void;
   onBack: () => void;
-  labels: { cars: string; race: string; shop: string; garage: string; tasks: string; news: string };
+  labels: { cars: string; race: string; garage: string; tasks: string; news: string };
   status?: ReactNode;
   taskBadge?: number;
 }
@@ -100,7 +100,7 @@ export function BottomBar({ car, tab, onTab, onBack, labels, status, taskBadge }
         </div>
       )}
 
-      <div className="absolute right-[0px] top-[-8px] flex">
+      <div className="absolute left-[196px] right-[8px] top-[-8px] flex justify-between">
         <Tab active={tab === "cars"} label={labels.cars} onClick={() => onTab("cars")}>
           <CarFace car={car} size={38} />
         </Tab>
@@ -117,11 +117,6 @@ export function BottomBar({ car, tab, onTab, onBack, labels, status, taskBadge }
         <Tab active={tab === "race"} label={labels.race} onClick={() => onTab("race")}>
           <span className="relative flex h-[40px] w-[40px] items-center justify-center rounded-full bg-gradient-to-b from-[#ff6b4a] to-[#c92a12] text-white">
             <FlagIcon width={22} height={22} />
-          </span>
-        </Tab>
-        <Tab active={tab === "shop"} label={labels.shop} onClick={() => onTab("shop")}>
-          <span className="relative flex h-[40px] w-[40px] items-center justify-center rounded-full bg-gradient-to-b from-[#9ef05a] to-[#3d9a1f] text-white">
-            <CartIcon width={24} height={24} />
           </span>
         </Tab>
         <Tab active={tab === "news"} label={labels.news} onClick={() => onTab("news")}>

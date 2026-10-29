@@ -28,7 +28,6 @@ import {
 import { HexEmblem, TitleBanner } from "./TitleBanner";
 import { CarShowcase } from "./CarShowcase";
 import { GarageView, type GarageData } from "./GaragePanel";
-import { ShopPanel, type ShopProps } from "./ShopPanel";
 import { TasksPanel, type TaskView } from "./TasksPanel";
 import { RacePanel, type RaceProps } from "./RacePanel";
 import { NewsPanel } from "./NewsPanel";
@@ -38,7 +37,7 @@ import { SlotButton } from "./ui";
 import { DealerRail } from "./Dealership";
 import type { Player } from "./WelcomeScreen";
 
-export type RightTab = "race" | "shop" | "garage" | "tasks" | "news";
+export type RightTab = "race" | "garage" | "tasks" | "news";
 
 export interface DesktopViewProps {
   t: Strings;
@@ -51,7 +50,6 @@ export interface DesktopViewProps {
   /** position of the driven car inside the owned-cars roster */
   viewIdx: number;
   garage: GarageData;
-  shop: ShopProps;
   ownedCars: Car[];
   tasks: TaskView[];
   taskBadge: number;
@@ -60,7 +58,6 @@ export interface DesktopViewProps {
   onSelectCar: (i: number) => void;
   onPrev: () => void;
   onNext: () => void;
-  onOpenShop: () => void;
   onOpenDealer: () => void;
   onEquip: (car: Car) => void;
 
@@ -169,8 +166,8 @@ function TopBar(p: DesktopViewProps) {
         <button
           type="button"
           id="desktop-top-coin-badge"
-          onClick={p.onOpenShop}
-          title={t.tabShop}
+          onClick={p.onOpenDealer}
+          title={t.dealership}
           className={cn(
             "me-[2px] flex items-center gap-[8px] rounded-full border-[3px] border-ink bg-navy-950/80 py-[4px] pe-[6px] ps-[14px] font-body text-[13px] font-black text-amber-400 transition-all duration-300 hover:brightness-125",
             isPulsing && "scale-[1.12] ring-[4px] ring-amber-400 shadow-[0_0_24px_rgba(255,210,58,0.85)] bg-navy-900",
@@ -494,7 +491,6 @@ export function DesktopView(p: DesktopViewProps) {
     ["garage", t.garage],
     ["tasks", t.tabTasks],
     ["race", t.tabRace],
-    ["shop", t.tabShop],
     ["news", t.tabNews],
   ];
 
@@ -575,9 +571,7 @@ export function DesktopView(p: DesktopViewProps) {
               key={p.rightTab}
               className="absolute inset-x-0 bottom-0 top-[26px] animate-slide-up rounded-[22px] border-[4px] border-ink bg-navy-950/80 px-[12px] pb-[12px] pt-[26px] shadow-[0_8px_0_#060a28,0_0_0_3px_rgba(120,200,255,0.35)] backdrop-blur-[2px]"
             >
-              {p.rightTab === "shop" ? (
-                <ShopPanel t={t} lang={lang} {...p.shop} className="h-full" />
-              ) : p.rightTab === "race" ? (
+              {p.rightTab === "race" ? (
                 <RacePanel t={t} lang={lang} {...p.race} dense className="h-full" />
               ) : p.rightTab === "tasks" ? (
                 <TasksPanel

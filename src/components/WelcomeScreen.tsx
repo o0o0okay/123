@@ -6,7 +6,6 @@ import { shortenAddress } from "@/solana";
 import { TitleBanner } from "./TitleBanner";
 import { CarShowcase } from "./CarShowcase";
 import { GarageView, type GarageData } from "./GaragePanel";
-import { ShopView, type ShopProps } from "./ShopPanel";
 import { TasksView, type TaskView } from "./TasksPanel";
 import { RaceView, type RaceProps } from "./RacePanel";
 import { NewsPanel } from "./NewsPanel";
@@ -32,7 +31,6 @@ interface Props {
   viewCar: Car;
   viewStats: CarStats;
   garage: GarageData;
-  shop: ShopProps;
   ownedCars: Car[];
   tasks: TaskView[];
   taskBadge: number;
@@ -51,14 +49,13 @@ interface Props {
   onCopied?: () => void;
 }
 
-/** Post-login screen (mobile layout): cars / shop / garage / news tabs. */
+/** Post-login screen (mobile layout): cars / garage / race / tasks / news tabs. */
 export function WelcomeScreen({
   t,
   lang,
   viewCar,
   viewStats,
   garage,
-  shop,
   ownedCars,
   tasks,
   taskBadge,
@@ -106,7 +103,6 @@ export function WelcomeScreen({
           <CarShowcase car={viewCar} onPrev={onPrev} onNext={onNext} hasMultiple={ownedCars.length > 1} />
         )}
         {tab === "race" && <RaceView t={t} lang={lang} race={race} />}
-        {tab === "shop" && <ShopView t={t} lang={lang} shop={shop} />}
         {tab === "garage" && <GarageView t={t} garage={garage} ownedCars={ownedCars} onEquip={onEquip} />}
         {tab === "tasks" && (
           <TasksView t={t} lang={lang} tasks={tasks} coins={garage.coins} onClaim={onClaimTask} />
@@ -172,7 +168,7 @@ export function WelcomeScreen({
         tab={tab}
         onTab={onTab}
         onBack={onLogout}
-        labels={{ cars: t.tabCars, race: t.tabRace, shop: t.tabShop, garage: t.garage, tasks: t.tabTasks, news: t.tabNews }}
+        labels={{ cars: t.tabCars, race: t.tabRace, garage: t.garage, tasks: t.tabTasks, news: t.tabNews }}
         taskBadge={taskBadge}
         status={
           <>

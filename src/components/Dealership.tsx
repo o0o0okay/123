@@ -109,8 +109,6 @@ interface FilterPanelProps {
   priceCap: number;
   affordable: boolean;
   setAffordable: (v: boolean) => void;
-  hideOwned: boolean;
-  setHideOwned: (v: boolean) => void;
   brandCounts: Record<string, number>;
   onReset: () => void;
   children?: ReactNode;
@@ -210,10 +208,6 @@ function FilterPanel(p: FilterPanelProps) {
             {t.affordableOnly}
             <Toggle on={p.affordable} onChange={p.setAffordable} />
           </div>
-          <div className="flex items-center justify-between gap-[8px] font-body text-[12px] font-extrabold text-white/80">
-            {t.hideOwned}
-            <Toggle on={p.hideOwned} onChange={p.setHideOwned} />
-          </div>
         </div>
       )}
 
@@ -276,7 +270,6 @@ export function Dealership({
   const [drives, setDrives] = useState<Drive[]>([]);
   const [maxPrice, setMaxPrice] = useState(priceCap);
   const [affordable, setAffordable] = useState(false);
-  const [hideOwned, setHideOwned] = useState(false);
   const [selectedId, setSelectedId] = useState(activeId);
   const [drawer, setDrawer] = useState(false);
   /** ids of the two cars in the comparison (max 2) */
@@ -321,12 +314,13 @@ export function Dealership({
     const out = cars.filter((c) => {
       const isOwned = owned.includes(c.id);
       if (mode === "sell" && !isOwned) return false;
+      // a car already in the garage is not for sale any more
+      if (mode === "buy" && isOwned) return false;
       if (brand !== "all" && c.brand !== brand) return false;
       if (drives.length && !drives.includes(c.drive)) return false;
       if (mode === "buy") {
         if (c.price > maxPrice) return false;
-        if (affordable && !isOwned && c.price > coins) return false;
-        if (hideOwned && isOwned) return false;
+        if (affordable && c.price > coins) return false;
       }
       if (q) {
         const b = BRANDS[c.brand];
@@ -348,24 +342,30 @@ export function Dealership({
       "year-desc": (a, b) => b.year - a.year,
     };
     return out.sort((a, b) => cmp[sort](a, b) || a.price - b.price);
-  }, [cars, owned, mode, brand, drives, maxPrice, affordable, hideOwned, coins, query, sort, sellValueOf]);
+  }, [cars, owned, mode, brand, drives, maxPrice, affordable, coins, query, sort, sellValueOf]);
 
   const selected = list.find((c) => c.id === selectedId) ?? list[0] ?? null;
   const activeCar = cars.find((c) => c.id === activeId);
   const sortLabel = t[SORTS.find((s) => s.key === sort)!.label] as string;
 
+  /** cars that are still for sale (the BUY tab never shows the garage) */
+  const forSale = useMemo(() => {
+    const ownedSet = new Set(owned);
+    return cars.filter((c) => !ownedSet.has(c.id));
+  }, [cars, owned]);
+
   const brandCounts = useMemo(() => {
     const m: Record<string, number> = {};
-    for (const c of cars) if (mode === "buy" || owned.includes(c.id)) m[c.brand] = (m[c.brand] ?? 0) + 1;
+    const src = mode === "buy" ? forSale : cars.filter((c) => owned.includes(c.id));
+    for (const c of src) m[c.brand] = (m[c.brand] ?? 0) + 1;
     return m;
-  }, [cars, owned, mode]);
+  }, [cars, owned, forSale, mode]);
 
   const activeFilters =
     (brand !== "all" ? 1 : 0) +
     drives.length +
     (mode === "buy" && maxPrice < priceCap ? 1 : 0) +
-    (mode === "buy" && affordable ? 1 : 0) +
-    (mode === "buy" && hideOwned ? 1 : 0);
+    (mode === "buy" && affordable ? 1 : 0);
 
   const crumbs = [t.dealership, ...(brand === "all" ? [t.allBrands] : [BRANDS[brand].country[lang], BRANDS[brand].name])];
 
@@ -377,7 +377,6 @@ export function Dealership({
     setDrives([]);
     setMaxPrice(priceCap);
     setAffordable(false);
-    setHideOwned(false);
     setSort("pp-asc");
   };
   const toggleDrive = (d: Drive) => {
@@ -466,11 +465,6 @@ export function Dealership({
       onSfx?.("toggle");
       setAffordable(v);
     },
-    hideOwned,
-    setHideOwned: (v) => {
-      onSfx?.("toggle");
-      setHideOwned(v);
-    },
     brandCounts,
     onReset: reset,
   };
@@ -545,7 +539,7 @@ export function Dealership({
           {m === "buy" ? <CartIcon width={15} height={15} /> : <TagIcon width={15} height={15} />}
           {m === "buy" ? t.buy : t.sellTab}
           <span className="rounded-full bg-black/25 px-[6px] font-body text-[10px] font-black leading-[16px]">
-            {m === "buy" ? cars.length : owned.length}
+            {m === "buy" ? forSale.length : owned.length}
           </span>
         </button>
       ))}
@@ -573,25 +567,7 @@ export function Dealership({
         </button>
       );
     }
-    if (isOwned) {
-      if (car.id === activeId)
-        return (
-          <span className={cn(base, "bg-navy-800 text-skyg-300")}>
-            <KeyIcon width={16} height={16} />
-            {t.equipped}
-          </span>
-        );
-      return (
-        <button
-          type="button"
-          onClick={() => onEquip(car)}
-          className={cn(base, "bg-gradient-to-b from-[#9ef05a] to-[#56b92a] text-ink shadow-[0_4px_0_#2f7f17] hover:brightness-110")}
-        >
-          <CheckIcon width={16} height={16} />
-          {t.equip}
-        </button>
-      );
-    }
+    // BUY: the list only holds cars that are not in the garage yet
     if (coins < car.price)
       return (
         <span className={cn(base, "bg-navy-900 font-body text-[12px] font-black text-white/40")}>
@@ -620,13 +596,7 @@ export function Dealership({
     const inCompare = compareIds.includes(car.id);
     const price = mode === "sell" ? sellValueOf(car) : car.price;
     const priceClass =
-      mode === "sell"
-        ? "text-mint-400"
-        : isOwned
-          ? "text-white/45"
-          : coins >= car.price
-            ? "text-amber-400"
-            : "text-[#ff8a6a]";
+      mode === "sell" ? "text-mint-400" : coins >= car.price ? "text-amber-400" : "text-[#ff8a6a]";
     return (
       // every tile is exactly the same size: a fixed card + a one-line name plate
       <div key={car.id} className="flex min-w-0 flex-col">
@@ -647,14 +617,10 @@ export function Dealership({
                 : "border-ink bg-navy-800/75 shadow-[0_4px_0_#060a28] hover:-translate-y-[1px] hover:bg-navy-700/85",
           )}
         >
-          {isOwned && (
-            <span
-              className={cn(
-                "absolute -top-[10px] left-1/2 z-10 -translate-x-1/2 whitespace-nowrap rounded-full border-[2px] border-ink px-[7px] font-body text-[9px] font-black leading-[15px] text-ink",
-                car.id === activeId ? "bg-skyg-300" : "bg-mint-400",
-              )}
-            >
-              {car.id === activeId ? t.equipped : t.owned}
+          {/* SELL lists the garage, so only the car in use needs a label */}
+          {mode === "sell" && isOwned && car.id === activeId && (
+            <span className="absolute -top-[10px] left-1/2 z-10 -translate-x-1/2 whitespace-nowrap rounded-full border-[2px] border-ink bg-skyg-300 px-[7px] font-body text-[9px] font-black leading-[15px] text-ink">
+              {t.equipped}
             </span>
           )}
           <div
@@ -704,17 +670,24 @@ export function Dealership({
     );
   };
 
+  const allOwned = mode === "buy" && forSale.length === 0;
   const emptyState = (
     <div className="flex h-full min-h-[200px] flex-col items-center justify-center gap-[10px] text-center">
-      <SearchIcon width={40} height={40} className="text-white/25" />
-      <div className="font-display text-[18px] text-white/60">{t.noResults}</div>
-      <button
-        type="button"
-        onClick={reset}
-        className="rounded-full border-[2.5px] border-ink bg-gradient-to-b from-[#ffd23a] to-[#ff9a1f] px-[16px] py-[5px] font-display text-[14px] text-ink"
-      >
-        {t.resetFilters}
-      </button>
+      {allOwned ? (
+        <CheckIcon width={40} height={40} className="text-mint-400/70" />
+      ) : (
+        <SearchIcon width={40} height={40} className="text-white/25" />
+      )}
+      <div className="font-display text-[18px] text-white/60">{allOwned ? t.garageComplete : t.noResults}</div>
+      {!allOwned && (
+        <button
+          type="button"
+          onClick={reset}
+          className="rounded-full border-[2.5px] border-ink bg-gradient-to-b from-[#ffd23a] to-[#ff9a1f] px-[16px] py-[5px] font-display text-[14px] text-ink"
+        >
+          {t.resetFilters}
+        </button>
+      )}
     </div>
   );
 

@@ -35,7 +35,6 @@ import { NewsPanel } from "./NewsPanel";
 import { StatPills, StatsRow } from "./Stats";
 import { CarFace } from "./BottomBar";
 import { SlotButton } from "./ui";
-import { DealerRail } from "./DealerBits";
 import type { Player } from "./WelcomeScreen";
 
 export type RightTab = "race" | "garage" | "tasks" | "news";
@@ -512,7 +511,6 @@ export function DesktopView(p: DesktopViewProps) {
   return (
     <div className="relative flex h-full flex-col">
       <TopBar {...p} />
-      <DealerRail label={t.dealership} onClick={p.onOpenDealer} className="top-1/2 -translate-y-1/2" />
 
       <div className="relative grid min-h-0 flex-1 grid-cols-[370px_minmax(0,1fr)_350px] gap-[24px] px-[34px] pb-[10px] pt-[8px]">
         {/* left: login or driver card */}

@@ -26,7 +26,7 @@ import type { CoinPack } from "./data/coinPacks";
 import { claimDaily, DEFAULT_DAILY, resolveDaily } from "./data/daily";
 import { TasksView, type TaskView } from "./components/TasksPanel";
 import { RaceView, type RaceProps } from "./components/RacePanel";
-import { DealerRail, SellConfirmModal } from "./components/DealerBits";
+import { SellConfirmModal } from "./components/DealerBits";
 import { LazyCoinShop, LazyDealership, LazyGate, LazyRaceOverlay, LazyWalletModal, preloadPanels } from "./components/lazy";
 import { simulateRace, type RaceMode, type RaceResult } from "./data/races";
 import { ME_ID, type BoardEntry } from "./data/leaderboard";
@@ -781,7 +781,6 @@ function AppContent({
       />
 
       <main className="relative min-h-0 flex-1">
-        <DealerRail label={t.dealership} onClick={openDealer} className="top-1/2 -translate-y-1/2" />
         {tab === "cars" && (
           <>
             <CarShowcase

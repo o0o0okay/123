@@ -1,14 +1,14 @@
 /**
  * The small dealership pieces that are used outside the dealership overlay:
- * the brand shield, the "are you sure you want to sell" dialog and the yellow
- * side rail. They live apart from `Dealership.tsx` so the (much bigger) overlay
- * can be loaded on demand.
+ * the brand shield and the "are you sure you want to sell" dialog. They live
+ * apart from `Dealership.tsx` so the (much bigger) overlay can be loaded on
+ * demand.
  */
 import type { MouseEvent } from "react";
 import { cn } from "@/utils/cn";
 import { BRANDS, carTitle, type BrandId, type Car } from "@/data/cars";
 import { fmt, type Strings } from "@/i18n";
-import { CoinIcon, StoreIcon, TagIcon } from "@/icons";
+import { CoinIcon, TagIcon } from "@/icons";
 import { PaintedImg } from "./PaintContext";
 import { GameButton, Modal } from "./ui";
 
@@ -116,22 +116,4 @@ export function SellConfirmModal({
   );
 }
 
-export function DealerRail({ label, onClick, className }: { label: string; onClick: () => void; className?: string }) {
-  return (
-    <button
-      type="button"
-      id="dealer-rail"
-      onClick={onClick}
-      aria-label={label}
-      title={label}
-      dir="ltr"
-      className={cn(
-        "group absolute left-0 z-20 flex w-[22px] flex-col items-center gap-[7px] rounded-r-[12px] border-[3px] border-l-0 border-ink bg-gradient-to-b from-[#ffd23a] to-[#ff9a1f] py-[10px] text-ink shadow-[3px_4px_0_#0a1038] transition-[width,filter] duration-200 hover:w-[28px] hover:brightness-110",
-        className,
-      )}
-    >
-      <StoreIcon width={15} height={15} className="shrink-0" />
-      <span className="rotate-180 font-display text-[11px] leading-none tracking-[0.14em] [writing-mode:vertical-rl]">{label}</span>
-    </button>
-  );
-}
+

@@ -13,7 +13,7 @@ import {
   type BoardRow,
 } from "@/data/leaderboard";
 import { fmt, type Lang, type Strings } from "@/i18n";
-import { TimerIcon, TrophyIcon } from "@/icons";
+import { TimerIcon } from "@/icons";
 import { RACE_ICONS } from "./raceIcons";
 
 /* ------------------------------------------------------------------ */
@@ -27,7 +27,8 @@ function Face({ entry, size }: { entry: BoardEntry; size: number }) {
   const h = w * (car.imgH / car.imgW);
   return (
     <span
-      className="relative shrink-0 overflow-hidden rounded-full border-[2.5px] border-ink bg-navy-700"
+      data-face=""
+      className="relative block shrink-0 overflow-hidden rounded-full border-[2.5px] border-ink bg-navy-700"
       style={{ width: size, height: size }}
     >
       <img
@@ -38,6 +39,23 @@ function Face({ entry, size }: { entry: BoardEntry; size: number }) {
         style={{ width: w, height: h, left: size / 2 - car.face.x * w, top: size / 2 - car.face.y * h }}
       />
     </span>
+  );
+}
+
+/**
+ * The whole car, fitted inside its box (`object-contain`): used on the podium,
+ * where a cropped avatar would cut the car in half.
+ */
+function CarArt({ entry }: { entry: BoardEntry }) {
+  const car = carOf(entry.carId);
+  return (
+    <img
+      data-car-art={entry.carId}
+      src={car.image}
+      alt=""
+      draggable={false}
+      className="h-full w-full object-contain object-bottom drop-shadow-[0_3px_3px_rgba(6,10,40,0.55)]"
+    />
   );
 }
 
@@ -156,25 +174,21 @@ function Podium({ rows, t, dense }: { rows: BoardRow[]; t: Strings; dense?: bool
             key={row.id}
             data-podium={row.rank}
             className={cn(
-              "relative flex flex-col items-center rounded-[12px] border-[2.5px] border-ink bg-gradient-to-b px-[4px] pb-[5px]",
-              first && "from-[#ffd23a] to-[#ff9a1f] pt-[16px]",
-              row.rank === 2 && "from-[#e9f0fa] to-[#a9b8cc] pt-[10px]",
-              row.rank === 3 && "from-[#ffc493] to-[#d9713a] pt-[10px]",
+              "relative flex flex-col items-center rounded-[12px] border-[2.5px] border-ink bg-gradient-to-b px-[3px] pb-[5px] pt-[6px]",
+              first && "from-[#ffd23a] to-[#ff9a1f] shadow-[0_3px_0_#a8610a]",
+              row.rank === 2 && "from-[#e9f0fa] to-[#a9b8cc] shadow-[0_3px_0_#5d6f8c]",
+              row.rank === 3 && "from-[#ffc493] to-[#d9713a] shadow-[0_3px_0_#8e421a]",
               row.me && "ring-[3px] ring-[#2fd47a]",
             )}
-            style={{ minHeight: dense ? (first ? 84 : 70) : first ? 96 : 80 }}
+            style={{ minHeight: dense ? (first ? 88 : 74) : first ? 100 : 84 }}
           >
-            <span className="absolute -top-[11px] left-1/2 -translate-x-1/2">
-              <Face entry={row} size={dense ? (first ? 34 : 28) : first ? 40 : 32} />
+            <span className="absolute -top-[7px] start-[2px]">
+              <RankBadge rank={row.rank} size={dense ? 19 : 22} />
             </span>
-            {first && (
-              <TrophyIcon
-                width={dense ? 13 : 15}
-                height={dense ? 13 : 15}
-                className="absolute -top-[1px] left-1/2 -translate-x-1/2 text-[#7a4a00]"
-              />
-            )}
-            <div className="mt-auto w-full truncate text-center font-display text-ink" dir="auto" style={{ fontSize: dense ? 10 : 11 }}>
+            <div className="w-full shrink-0" style={{ height: dense ? (first ? 40 : 32) : first ? 50 : 40 }}>
+              <CarArt entry={row} />
+            </div>
+            <div className="mt-auto w-full truncate text-center font-display leading-tight text-ink" dir="auto" style={{ fontSize: dense ? 10 : 11 }}>
               {row.name}
             </div>
             <div className="font-display leading-none text-ink tabular-nums" style={{ fontSize: dense ? 12 : 14 }}>
@@ -282,7 +296,7 @@ export function Leaderboard({
         </span>
       </div>
 
-      <div className="no-scrollbar min-h-0 flex-1 space-y-[5px] overflow-y-auto pe-[1px] pt-[12px]">
+      <div className="no-scrollbar min-h-0 flex-1 space-y-[5px] overflow-y-auto pe-[1px] pt-[9px]">
         <Podium rows={top} t={t} dense={dense} />
 
         <div className="space-y-[4px] pt-[6px]">

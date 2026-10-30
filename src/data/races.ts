@@ -136,6 +136,8 @@ export interface RaceResult {
   total: number;
   /** score shown in the result panel (value + unit) */
   score: string;
+  /** leaderboard points for this run (higher is better, same scale for every mode) */
+  points: number;
   /** coins earned (0 on a bad loss) */
   reward: number;
   /** nice per-stage breakdown for the result screen */
@@ -186,12 +188,14 @@ export function simulateRace(mode: RaceMode, stats: CarStats): RaceResult {
   const damage = Math.max(0, Math.min(100, Math.round(60 - stats.armor * 0.4 + rand(-10, 25))));
 
   let score = "";
+  let points = 0;
   const highlights: { en: string; fa: string }[] = [];
 
   switch (mode.id) {
     case "street": {
-      const lap = (92 - stats.topSpeed * 0.12 + rand(-20, 20) / 10).toFixed(2);
-      score = `${lap}s`;
+      const lap = 92 - stats.topSpeed * 0.12 + rand(-20, 20) / 10;
+      score = `${lap.toFixed(2)}s`;
+      points = Math.round(Math.max(0, 120 - lap) * 900);
       highlights.push(
         { en: `Finished ${ordinal(place)} of ${total}`, fa: `رتبه ${place} از ${total}` },
         { en: `Top speed ${stats.topSpeed} km/h`, fa: `سرعت نهایی ${stats.topSpeed} کیلومتر بر ساعت` },
@@ -202,6 +206,7 @@ export function simulateRace(mode: RaceMode, stats: CarStats): RaceResult {
     case "score": {
       const pts = Math.round((stats.accel * 180 + stats.boost * 120) * (0.7 + perf * 0.5));
       score = pts.toLocaleString("en-US");
+      points = Math.round(pts * 1.35);
       highlights.push(
         { en: `${rand(8, 24)} near-misses`, fa: `${rand(8, 24)} فرار مویی` },
         { en: `Best combo x${rand(4, 12)}`, fa: `بهترین کمبو x${rand(4, 12)}` },
@@ -212,6 +217,7 @@ export function simulateRace(mode: RaceMode, stats: CarStats): RaceResult {
     case "demolition": {
       const hp = won ? rand(15, 70) : 0;
       score = won ? `${hp}%` : "WRECKED";
+      points = Math.round(hp * 760) + (won ? 14000 : 6000);
       highlights.push(
         { en: won ? "Rival wrecked!" : "You got wrecked", fa: won ? "حریف نابود شد!" : "تو نابود شدی" },
         { en: `${rand(4, 11)} slams landed`, fa: `${rand(4, 11)} ضربه موفق` },
@@ -222,6 +228,7 @@ export function simulateRace(mode: RaceMode, stats: CarStats): RaceResult {
     case "pursuit": {
       const secs = Math.round(40 + perf * 90 + rand(-8, 12));
       score = `${secs}s`;
+      points = Math.round(secs * 420);
       highlights.push(
         { en: `Escaped ${rand(3, 9)} cruisers`, fa: `از ${rand(3, 9)} ماشین پلیس فرار کردی` },
         { en: `${rand(1, 4)} roadblocks smashed`, fa: `${rand(1, 4)} سد شکسته شد` },
@@ -232,6 +239,7 @@ export function simulateRace(mode: RaceMode, stats: CarStats): RaceResult {
     case "drift": {
       const pts = Math.round((stats.accel * 95 + stats.topSpeed * 20) * (0.6 + perf * 0.5));
       score = pts.toLocaleString("en-US");
+      points = Math.round(pts * 2.4);
       highlights.push(
         { en: `Longest drift ${rand(80, 240)}m`, fa: `طولانی‌ترین دریفت ${rand(80, 240)} متر` },
         { en: `Max angle ${rand(38, 72)}°`, fa: `بیشترین زاویه ${rand(38, 72)} درجه` },
@@ -240,8 +248,9 @@ export function simulateRace(mode: RaceMode, stats: CarStats): RaceResult {
       break;
     }
     case "timeattack": {
-      const lap = (74 - stats.boost * 0.15 - stats.topSpeed * 0.05 + rand(-15, 15) / 10).toFixed(2);
-      score = `${lap}s`;
+      const lap = 74 - stats.boost * 0.15 - stats.topSpeed * 0.05 + rand(-15, 15) / 10;
+      score = `${lap.toFixed(2)}s`;
+      points = Math.round(Math.max(0, 120 - lap) * 900);
       highlights.push(
         { en: won ? "Ghost beaten!" : "Ghost was faster", fa: won ? "رکورد شبح شکست!" : "شبح سریع‌تر بود" },
         { en: `Nitro used ${rand(2, 5)} times`, fa: `${rand(2, 5)} بار نیترو زدی` },
@@ -251,7 +260,7 @@ export function simulateRace(mode: RaceMode, stats: CarStats): RaceResult {
     }
   }
 
-  return { raceId: mode.id, place, total, score, reward, highlights, won, damage };
+  return { raceId: mode.id, place, total, score, points, reward, highlights, won, damage };
 }
 
 export function ordinal(n: number) {

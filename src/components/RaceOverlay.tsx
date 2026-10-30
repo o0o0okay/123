@@ -16,6 +16,8 @@ interface Props {
   car: Car;
   /** null while racing, set when the simulation is done */
   result: RaceResult | null;
+  /** did this run beat the player's own best in this mode? */
+  best?: boolean;
   onCollect: (e: MouseEvent<HTMLButtonElement>) => void;
   onAgain: () => void;
   onClose: () => void;
@@ -23,7 +25,7 @@ interface Props {
 }
 
 /** Full-screen race: animated road scene for ~3.5s, then the result card. */
-export function RaceOverlay({ t, lang, mode, car, result, onCollect, onAgain, onClose, onStageTick }: Props) {
+export function RaceOverlay({ t, lang, mode, car, result, best, onCollect, onAgain, onClose, onStageTick }: Props) {
   const [stage, setStage] = useState(0);
   const [progress, setProgress] = useState(0);
   const collected = useRef(false);
@@ -156,6 +158,20 @@ export function RaceOverlay({ t, lang, mode, car, result, onCollect, onAgain, on
           <div className="mt-[12px] flex items-center justify-between rounded-[14px] border-[3px] border-ink bg-navy-950/70 px-[14px] py-[8px]">
             <span className="font-body text-[10px] font-black tracking-wider text-white/50">{mode.unit[lang]}</span>
             <span className="font-display text-[26px] leading-none text-mint-400 t-stroke sw-3">{result.score}</span>
+          </div>
+
+          <div className="mt-[6px] flex items-center justify-between rounded-[14px] border-[3px] border-ink bg-navy-950/70 px-[14px] py-[6px]">
+            <span className="font-body text-[10px] font-black tracking-wider text-white/50">{t.racePoints}</span>
+            <span className="flex items-center gap-[6px]">
+              {best && (
+                <span className="rounded-full border-[2px] border-ink bg-mint-400 px-[6px] font-body text-[8px] font-black leading-[14px] tracking-wider text-ink">
+                  {t.newBest}
+                </span>
+              )}
+              <span className="font-display text-[20px] leading-none text-amber-400 tabular-nums">
+                +{result.points.toLocaleString("en-US")}
+              </span>
+            </span>
           </div>
 
           <div className="mt-[8px] space-y-[5px]">

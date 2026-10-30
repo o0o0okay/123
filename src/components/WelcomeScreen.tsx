@@ -1,7 +1,7 @@
 import { useState } from "react";
 import type { Car, CarStats } from "@/data/cars";
 import type { Lang, Strings } from "@/i18n";
-import { ArrowRightIcon, CopyIcon, CrosshairIcon, PlayIcon, SolanaIcon, UndoIcon } from "@/icons";
+import { ArrowRightIcon, CopyIcon, CrosshairIcon, PlayIcon, SolanaIcon, StoreIcon, UndoIcon } from "@/icons";
 import { shortenAddress } from "@/solana";
 import { TitleBanner } from "./TitleBanner";
 import { CarShowcase } from "./CarShowcase";
@@ -13,7 +13,6 @@ import { NewsPanel } from "./NewsPanel";
 import { StatPills, StatsRow } from "./Stats";
 import { BottomBar, type TabKey } from "./BottomBar";
 import { GameButton } from "./ui";
-import { DealerRail } from "./DealerBits";
 
 export interface Player {
   name: string;
@@ -107,7 +106,6 @@ export function WelcomeScreen({
       />
 
       <main className="relative min-h-0 flex-1">
-        <DealerRail label={t.dealership} onClick={onOpenDealer} className="top-1/2 -translate-y-1/2" />
         {tab === "cars" && (
           <CarShowcase car={viewCar} onPrev={onPrev} onNext={onNext} hasMultiple={ownedCars.length > 1} />
         )}
@@ -156,14 +154,20 @@ export function WelcomeScreen({
         </div>
       </section>
 
-      <section className="flex shrink-0 items-end justify-center gap-[14px] px-[22px] pb-[12px] pt-[12px]">
-        <GameButton variant="grey" className="h-[66px] w-[140px]" onClick={onLogout}>
-          <span className="flex items-center gap-[6px] font-display text-[17px] text-white t-stroke sw-3">
-            <UndoIcon width={22} height={22} />
+      <section className="flex shrink-0 items-end justify-center gap-[10px] px-[22px] pb-[12px] pt-[12px]">
+        <GameButton variant="green" className="h-[66px] w-[104px]" onClick={onOpenDealer}>
+          <span className="flex flex-col items-center gap-[2px] whitespace-nowrap font-display text-[12px] leading-none tracking-wide text-white t-stroke sw-3">
+            <StoreIcon width={20} height={20} />
+            {t.dealership}
+          </span>
+        </GameButton>
+        <GameButton variant="grey" className="h-[66px] w-[112px]" onClick={onLogout}>
+          <span className="flex items-center gap-[5px] font-display text-[15px] text-white t-stroke sw-3">
+            <UndoIcon width={20} height={20} />
             {t.logout}
           </span>
         </GameButton>
-        <GameButton variant="orange" className="h-[78px] w-[300px] animate-glow" onClick={onStartChase}>
+        <GameButton variant="orange" className="h-[78px] flex-1 animate-glow" onClick={onStartChase}>
           <span className="flex items-center gap-[10px]">
             <span className="relative flex h-[44px] w-[44px] items-center justify-center rounded-full border-[3px] border-ink bg-gradient-to-b from-[#6fcf36] to-[#3d9a1f] text-white shadow-[0_3px_0_#1f5a10]">
               <CrosshairIcon width={28} height={28} />

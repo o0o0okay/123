@@ -1,5 +1,6 @@
 import { cn } from "@/utils/cn";
 import type { Car } from "@/data/cars";
+import { useSwipe } from "@/hooks";
 import { PaintedImg } from "./PaintContext";
 import { ArrowButton } from "./ui";
 
@@ -12,9 +13,18 @@ interface Props {
   hasMultiple?: boolean;
 }
 
-/** Centre stage: the owned car shown on the home screen, its shadow and the carousel arrows. */
+/**
+ * Centre stage: the owned car shown on the home screen, its shadow and the carousel arrows.
+ *
+ * The whole stage is a swipe surface: drag it with the mouse or a finger and
+ * release past the threshold to move to the next / previous owned car, exactly
+ * like a phone carousel. The arrows stay for keyboard/accessibility users, but
+ * they are no longer the only way to browse the garage.
+ */
 export function CarShowcase({ car, onPrev, onNext, variant = "mobile", hasMultiple = true }: Props) {
   const desk = variant === "desktop";
+  const { offset, bind } = useSwipe({ onPrev, onNext, enabled: hasMultiple });
+
   return (
     <div className="relative h-full" dir="ltr">
       {/* speed streaks behind the car */}
@@ -33,29 +43,41 @@ export function CarShowcase({ car, onPrev, onNext, variant = "mobile", hasMultip
         ))}
       </div>
 
-      {/* car */}
+      {/* car — the swipe surface */}
       <div
+        {...bind}
+        style={{ touchAction: "pan-y" }}
         className={cn(
           "absolute flex items-center justify-center",
           desk ? "inset-x-[70px] bottom-[34px] top-[72px]" : "inset-x-[26px] bottom-[30px] top-[56px]",
+          hasMultiple && "cursor-grab",
         )}
       >
         <div
           className={cn(
-            "absolute bottom-[2px] left-1/2 h-[38px] -translate-x-1/2 rounded-[50%] bg-[#0b2470] blur-[9px]",
+            "pointer-events-none absolute bottom-[2px] left-1/2 h-[38px] -translate-x-1/2 rounded-[50%] bg-[#0b2470] blur-[9px]",
             desk ? "w-[300px]" : "w-[240px]",
           )}
         />
         <div className="relative w-full animate-bob">
-          <PaintedImg
-            key={car.id}
-            carId={car.id}
-            shadow="drop-shadow(0 14px 12px rgba(8,20,90,0.5))"
-            src={car.image}
-            alt={car.name}
-            draggable={false}
-            className="max-h-full w-full max-w-none animate-pop-in object-contain"
-          />
+          {/* the drag offset lives here so it never fights the bobbing animation */}
+          <div
+            className="w-full"
+            style={{
+              transform: offset ? `translateX(${offset}px)` : undefined,
+              transition: offset ? "none" : "transform 240ms cubic-bezier(0.22, 1, 0.36, 1)",
+            }}
+          >
+            <PaintedImg
+              key={car.id}
+              carId={car.id}
+              shadow="drop-shadow(0 14px 12px rgba(8,20,90,0.5))"
+              src={car.image}
+              alt={car.name}
+              draggable={false}
+              className="max-h-full w-full max-w-none animate-pop-in object-contain"
+            />
+          </div>
         </div>
       </div>
 

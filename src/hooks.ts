@@ -1,4 +1,12 @@
-import { useCallback, useEffect, useRef, useState } from "react";
+import {
+  useCallback,
+  useEffect,
+  useRef,
+  useState,
+  type MouseEvent as ReactMouseEvent,
+  type PointerEvent as ReactPointerEvent,
+  type RefObject,
+} from "react";
 
 /* ---------------- design canvases ---------------- */
 // Mobile: portrait 540 x 960 (letterboxed on larger portrait screens)
@@ -288,4 +296,252 @@ export function useAnimatedNumber(target: number, duration = 600) {
   }, [target, duration]);
 
   return display;
+}
+
+/* ---------------- horizontal "grab & drag" rows ---------------- */
+
+/** How much of the row is hidden on each side (drives the edge fade). */
+type ScrollOverflow = "none" | "start" | "end" | "both";
+
+interface DragScroll {
+  /** attach to the horizontally scrollable element */
+  ref: RefObject<HTMLDivElement | null>;
+  /** spread on the same element — mouse drag, wheel and click-guard */
+  dragProps: {
+    onPointerDown: (e: ReactPointerEvent<HTMLElement>) => void;
+    onPointerMove: (e: ReactPointerEvent<HTMLElement>) => void;
+    onPointerUp: (e: ReactPointerEvent<HTMLElement>) => void;
+    onPointerCancel: (e: ReactPointerEvent<HTMLElement>) => void;
+    onClickCapture: (e: ReactMouseEvent<HTMLElement>) => void;
+  };
+}
+
+/**
+ * Makes a horizontal list behave like a carousel on every input device:
+ *
+ * - touch   → native momentum scrolling (the browser already does it)
+ * - mouse   → press and drag anywhere in the row to slide it, and a normal
+ *             vertical wheel scrolls the row sideways
+ * - a drag never fires the click of the card that happened to be under the
+ *             cursor, so sliding does not accidentally change the car
+ * - `activeKey` is kept centred when it changes (new car selected, new car bought)
+ *
+ * `itemCount` re-runs the overflow measurement when the list grows or shrinks.
+ * Pair it with the `drag-x` class for the cursor / edge fade.
+ */
+export function useDragScroll(activeKey?: unknown, itemCount = 0): DragScroll {
+  const ref = useRef<HTMLDivElement | null>(null);
+  const drag = useRef<{ id: number | undefined; x: number; left: number; moved: boolean } | null>(null);
+  const swallowClick = useRef(false);
+  /** re-measures the row; kept in a ref so the input handlers can poke it */
+  const measure = useRef<() => void>(() => {});
+
+  const maxScroll = (el: HTMLElement) => el.scrollWidth - el.clientWidth;
+
+  /* distance hidden on each side -> data attribute used by the edge fade */
+  useEffect(() => {
+    const el = ref.current;
+    if (!el) return;
+
+    const sync = () => {
+      const max = maxScroll(el);
+      const x = Math.round(el.scrollLeft);
+      const next: ScrollOverflow =
+        max <= 2 ? "none" : x <= 1 ? "end" : x >= max - 1 ? "start" : "both";
+      if (el.dataset.overflow !== next) el.dataset.overflow = next;
+    };
+
+    measure.current = sync;
+    sync();
+    // layout (web fonts, first paint) may settle a frame later
+    const raf = typeof requestAnimationFrame === "function" ? requestAnimationFrame(sync) : 0;
+
+    el.addEventListener("scroll", sync, { passive: true });
+    const ro = typeof ResizeObserver !== "undefined" ? new ResizeObserver(sync) : null;
+    ro?.observe(el);
+    return () => {
+      if (raf) cancelAnimationFrame(raf);
+      el.removeEventListener("scroll", sync);
+      ro?.disconnect();
+    };
+  }, [itemCount]);
+
+  /* the wheel drives the row sideways, but only while it actually overflows */
+  useEffect(() => {
+    const el = ref.current;
+    if (!el) return;
+
+    const onWheel = (e: WheelEvent) => {
+      if (maxScroll(el) <= 2) return;
+      if (Math.abs(e.deltaX) >= Math.abs(e.deltaY)) return; // already horizontal
+      e.preventDefault();
+      el.scrollLeft += e.deltaY;
+      measure.current();
+    };
+
+    el.addEventListener("wheel", onWheel, { passive: false });
+    return () => el.removeEventListener("wheel", onWheel);
+  }, []);
+
+  /* keep the selected car visible without scrolling anything else on the page */
+  useEffect(() => {
+    const el = ref.current;
+    if (!el) return;
+    const item = el.querySelector<HTMLElement>("[data-active='true']");
+    if (!item) return;
+
+    const er = el.getBoundingClientRect();
+    const ir = item.getBoundingClientRect();
+    const delta = ir.left + ir.width / 2 - (er.left + er.width / 2);
+    if (Math.abs(delta) < 4) return;
+    if (typeof el.scrollTo === "function") el.scrollTo({ left: el.scrollLeft + delta, behavior: "smooth" });
+    else el.scrollLeft += delta;
+  }, [activeKey, itemCount]);
+
+  const onPointerDown = (e: ReactPointerEvent<HTMLElement>) => {
+    const el = ref.current;
+    // touch keeps the browser's own scrolling (and its momentum)
+    if (!el || e.pointerType === "touch" || e.button !== 0 || maxScroll(el) <= 2) return;
+    drag.current = { id: e.pointerId, x: e.clientX, left: el.scrollLeft, moved: false };
+  };
+
+  const onPointerMove = (e: ReactPointerEvent<HTMLElement>) => {
+    const el = ref.current;
+    const d = drag.current;
+    if (!el || !d || d.id !== e.pointerId) return;
+
+    const dx = e.clientX - d.x;
+    if (!d.moved) {
+      if (Math.abs(dx) < 5) return; // a plain click, not a drag
+      d.moved = true;
+      el.classList.add("is-dragging");
+      // capture only now: grabbing from pointerdown would retarget the click
+      // and stop a simple tap from selecting the card under the cursor
+      try {
+        el.setPointerCapture?.(e.pointerId);
+      } catch {
+        /* no pointer capture support */
+      }
+    }
+    el.scrollLeft = d.left - dx;
+    measure.current();
+    if (e.cancelable) e.preventDefault();
+  };
+
+  const endDrag = (e: ReactPointerEvent<HTMLElement>) => {
+    const el = ref.current;
+    const d = drag.current;
+    if (!el || !d || d.id !== e.pointerId) return;
+
+    if (d.moved) {
+      // the click that follows this release belongs to the drag, not to a card
+      swallowClick.current = true;
+      window.setTimeout(() => {
+        swallowClick.current = false;
+      }, 80);
+    }
+    el.classList.remove("is-dragging");
+    try {
+      el.releasePointerCapture?.(e.pointerId);
+    } catch {
+      /* the pointer may already be gone */
+    }
+    drag.current = null;
+  };
+
+  const onClickCapture = (e: ReactMouseEvent<HTMLElement>) => {
+    if (!swallowClick.current) return;
+    swallowClick.current = false;
+    e.preventDefault();
+    e.stopPropagation();
+  };
+
+  return {
+    ref,
+    dragProps: { onPointerDown, onPointerMove, onPointerUp: endDrag, onPointerCancel: endDrag, onClickCapture },
+  };
+}
+
+/* ---------------- swipe the car itself ---------------- */
+
+interface Swipe {
+  /** current horizontal drag offset in px (0 when idle) */
+  offset: number;
+  /** spread on the swipe surface */
+  bind: {
+    onPointerDown: (e: ReactPointerEvent<HTMLElement>) => void;
+    onPointerMove: (e: ReactPointerEvent<HTMLElement>) => void;
+    onPointerUp: (e: ReactPointerEvent<HTMLElement>) => void;
+    onPointerCancel: (e: ReactPointerEvent<HTMLElement>) => void;
+  };
+}
+
+/**
+ * Horizontal swipe / drag on the car stage: swipe left for the next car, right
+ * for the previous one, exactly like a phone carousel — with mouse or finger.
+ * The car follows the finger (`offset`) and springs back if the gesture was too
+ * short. Vertical gestures are ignored, so scrolling never switches the car.
+ */
+export function useSwipe({
+  onPrev,
+  onNext,
+  enabled = true,
+  threshold = 56,
+}: {
+  onPrev: () => void;
+  onNext: () => void;
+  enabled?: boolean;
+  threshold?: number;
+}): Swipe {
+  const [offset, setOffset] = useState(0);
+  const start = useRef<{ id: number | undefined; x: number; y: number } | null>(null);
+  const dragging = useRef(false);
+
+  const reset = () => {
+    start.current = null;
+    dragging.current = false;
+    setOffset(0);
+  };
+
+  const onPointerDown = (e: ReactPointerEvent<HTMLElement>) => {
+    if (!enabled || e.button !== 0) return;
+    start.current = { id: e.pointerId, x: e.clientX, y: e.clientY };
+    dragging.current = false;
+  };
+
+  const onPointerMove = (e: ReactPointerEvent<HTMLElement>) => {
+    const s = start.current;
+    if (!s || s.id !== e.pointerId) return;
+
+    const dx = e.clientX - s.x;
+    const dy = e.clientY - s.y;
+
+    if (!dragging.current) {
+      if (Math.abs(dx) < 6 && Math.abs(dy) < 6) return;
+      if (Math.abs(dy) > Math.abs(dx)) {
+        start.current = null; // a vertical gesture is not a car swipe
+        return;
+      }
+      dragging.current = true;
+      e.currentTarget.setPointerCapture?.(e.pointerId);
+    }
+    e.currentTarget.style.cursor = "grabbing";
+    setOffset(dx);
+  };
+
+  const finish = (e: ReactPointerEvent<HTMLElement>) => {
+    const s = start.current;
+    if (!s || s.id !== e.pointerId) return;
+
+    const dx = e.clientX - s.x;
+    const moved = dragging.current;
+    reset();
+    e.currentTarget.style.cursor = "";
+
+    if (!moved) return;
+    if (dx <= -threshold) onNext();
+    else if (dx >= threshold) onPrev();
+  };
+
+  return { offset, bind: { onPointerDown, onPointerMove, onPointerUp: finish, onPointerCancel: finish } };
 }

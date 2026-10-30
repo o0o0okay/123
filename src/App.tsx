@@ -29,6 +29,7 @@ import { RaceView, type RaceProps } from "./components/RacePanel";
 import { DealerRail, SellConfirmModal } from "./components/DealerBits";
 import { LazyCoinShop, LazyDealership, LazyGate, LazyRaceOverlay, LazyWalletModal, preloadPanels } from "./components/lazy";
 import { simulateRace, type RaceMode, type RaceResult } from "./data/races";
+import { ME_ID, type BoardEntry } from "./data/leaderboard";
 import {
   BackpackIcon,
   GearIcon,
@@ -96,7 +97,11 @@ function AppContent({
   const [coinShopOpen, setCoinShopOpen] = useState(false);
   const [raceMode, setRaceMode] = useState<RaceMode | null>(null);
   const [raceResult, setRaceResult] = useState<RaceResult | null>(null);
+  const [raceBest, setRaceBest] = useState(false);
   const raceTimer = useRef<number | null>(null);
+  /** latest committed score, readable from the race timeout without stale closures */
+  const scoreRef = useRef(playerState.score);
+  scoreRef.current = playerState.score;
 
   // Solana wallet state
   const [wallets, setWallets] = useState<SolanaWalletInfo[]>([]);
@@ -561,12 +566,25 @@ function AppContent({
       },
     }));
     setRaceResult(null);
+    setRaceBest(false);
     setRaceMode(mode);
     if (raceTimer.current) window.clearTimeout(raceTimer.current);
     raceTimer.current = window.setTimeout(() => {
       const res = simulateRace(mode, activeStats);
       setRaceResult(res);
       sfx(res.won ? "success" : "error");
+      // leaderboard: bank the points and remember the best run of this mode
+      const prevBest = scoreRef.current.best[mode.id] ?? 0;
+      setRaceBest(res.points > prevBest);
+      setPlayerState((p) => ({
+        ...p,
+        score: {
+          total: p.score.total + res.points,
+          runs: p.score.runs + 1,
+          wins: p.score.wins + (res.won ? 1 : 0),
+          best: { ...p.score.best, [mode.id]: Math.max(prevBest, res.points) },
+        },
+      }));
       if (res.won) {
         setPlayerState((p) => ({
           ...p,
@@ -726,12 +744,24 @@ function AppContent({
     onOpenShop: openCoinShop,
   };
 
+  /** the player's own row on the score board */
+  const myBoard: BoardEntry = {
+    id: ME_ID,
+    name: player?.name || t.you,
+    carId: activeCar.id,
+    total: playerState.score.total,
+    best: playerState.score.best,
+    races: playerState.score.runs,
+    wins: playerState.score.wins,
+  };
+
   const race: RaceProps = {
     stats: activeStats,
     coins,
     wins: playerState.raceWins,
     racing: !!raceMode,
     onRace: startRace,
+    board: myBoard,
   };
 
   const onTab = (v: TabKey) => {
@@ -970,6 +1000,7 @@ function AppContent({
             mode={raceMode}
             car={activeCar}
             result={raceResult}
+            best={raceBest}
             onCollect={collectRacePrize}
             onAgain={raceAgain}
             onClose={closeRace}

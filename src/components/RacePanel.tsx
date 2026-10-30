@@ -1,36 +1,27 @@
-import type { ReactNode } from "react";
+import { useState, type ReactNode } from "react";
 import { cn } from "@/utils/cn";
 import type { CarStats } from "@/data/cars";
-import { RACES, type RaceId, type RaceMode } from "@/data/races";
+import { RACES, type RaceMode } from "@/data/races";
+import type { BoardEntry } from "@/data/leaderboard";
 import { fmt, type Lang, type Strings } from "@/i18n";
 import { useAnimatedNumber } from "@/hooks";
 import { useCoinFly } from "./CoinFlyEffect";
 import {
   BumperIcon,
   CoinIcon,
-  DriftIcon,
   FlagIcon,
   GaugeIcon,
   NitroIcon,
-  PoliceLightIcon,
   PowerIcon,
-  SkullIcon,
-  StarBurstIcon,
-  TimerIcon,
   TireIcon,
   TrophyIcon,
   UserIcon,
 } from "@/icons";
 import { FloatingPanel } from "./ui";
+import { Leaderboard } from "./Leaderboard";
+import { RACE_ICONS } from "./raceIcons";
 
-export const RACE_ICONS: Record<RaceId, ReactNode> = {
-  street: <FlagIcon width={26} height={26} />,
-  score: <StarBurstIcon width={26} height={26} />,
-  demolition: <SkullIcon width={26} height={26} />,
-  pursuit: <PoliceLightIcon width={26} height={26} />,
-  drift: <DriftIcon width={26} height={26} />,
-  timeattack: <TimerIcon width={26} height={26} />,
-};
+export { RACE_ICONS };
 
 const PRIMARY_ICON: Record<RaceMode["primary"], ReactNode> = {
   topSpeed: <GaugeIcon width={12} height={12} />,
@@ -45,6 +36,8 @@ export interface RaceProps {
   wins: Record<string, number>;
   racing: boolean;
   onRace: (mode: RaceMode) => void;
+  /** the player's leaderboard card (null while logged out) */
+  board: BoardEntry | null;
 }
 
 /* ------------------------------------------------------------------ */
@@ -60,6 +53,7 @@ function RaceCard({
   wins,
   racing,
   onRace,
+  best = 0,
   dense,
 }: {
   t: Strings;
@@ -70,6 +64,8 @@ function RaceCard({
   wins: number;
   racing: boolean;
   onRace: (m: RaceMode) => void;
+  /** the player's best run of this mode (0 = never scored) */
+  best?: number;
   dense?: boolean;
 }) {
   const affordable = coins >= mode.fee;
@@ -137,6 +133,15 @@ function RaceCard({
               <PowerIcon width={10} height={10} />
               {mode.minPower}
             </span>
+            {best > 0 && (
+              <span
+                data-best={mode.id}
+                className="flex items-center gap-[3px] rounded-full border-[2px] border-ink bg-navy-950 px-[6px] font-body text-[9px] font-black leading-[15px] text-amber-400"
+              >
+                <TrophyIcon width={10} height={10} />
+                {best.toLocaleString("en-US")}
+              </span>
+            )}
           </div>
         </div>
       </div>
@@ -169,6 +174,7 @@ function RaceCard({
 
         <button
           type="button"
+          data-race={mode.id}
           disabled={!affordable || racing}
           onClick={() => onRace(mode)}
           className={cn(
@@ -199,12 +205,15 @@ export function RacePanel({
   wins,
   racing,
   onRace,
+  board,
   className,
   dense,
 }: RaceProps & { t: Strings; lang: Lang; className?: string; dense?: boolean }) {
   const animatedCoins = useAnimatedNumber(coins);
   const { isPulsing } = useCoinFly();
   const totalWins = Object.values(wins).reduce((a, b) => a + b, 0);
+  /** race modes or the score board */
+  const [view, setView] = useState<"modes" | "ranks">("modes");
 
   return (
     <div className={cn("flex h-full flex-col gap-[9px]", className)}>
@@ -235,22 +244,46 @@ export function RacePanel({
         </div>
       </div>
 
-      <div className="no-scrollbar min-h-0 flex-1 space-y-[8px] overflow-y-auto px-[2px] pb-[3px] pt-[2px]">
-        {RACES.map((mode) => (
-          <RaceCard
-            key={mode.id}
-            t={t}
-            lang={lang}
-            mode={mode}
-            stats={stats}
-            coins={coins}
-            wins={wins[mode.id] ?? 0}
-            racing={racing}
-            onRace={onRace}
-            dense={dense}
-          />
+      <div className="flex shrink-0 gap-[2px] rounded-full border-[3px] border-ink bg-navy-950 p-[2px]">
+        {(["modes", "ranks"] as const).map((v) => (
+          <button
+            key={v}
+            type="button"
+            onClick={() => setView(v)}
+            aria-pressed={view === v}
+            className={cn(
+              "flex-1 rounded-full px-[10px] py-[3px] font-display text-[12px] tracking-wide transition-colors",
+              view === v
+                ? "bg-gradient-to-b from-[#ffd23a] to-[#ff9a1f] text-white t-stroke sw-2"
+                : "text-white/50 hover:text-white",
+            )}
+          >
+            {v === "modes" ? t.raceTab : t.boardTab}
+          </button>
         ))}
       </div>
+
+      {view === "ranks" ? (
+        <Leaderboard t={t} lang={lang} me={board} dense={dense} />
+      ) : (
+        <div className="no-scrollbar min-h-0 flex-1 space-y-[8px] overflow-y-auto px-[2px] pb-[3px] pt-[2px]">
+          {RACES.map((mode) => (
+            <RaceCard
+              key={mode.id}
+              t={t}
+              lang={lang}
+              mode={mode}
+              stats={stats}
+              coins={coins}
+              wins={wins[mode.id] ?? 0}
+              best={board?.best[mode.id] ?? 0}
+              racing={racing}
+              onRace={onRace}
+              dense={dense}
+            />
+          ))}
+        </div>
+      )}
     </div>
   );
 }

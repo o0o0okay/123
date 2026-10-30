@@ -27,6 +27,18 @@ export interface PlayerState {
   raceWins: Record<string, number>;
   /** total races driven */
   raceCount: number;
+  /** leaderboard score: lifetime points + the best single run of every mode */
+  score: PlayerScore;
+}
+
+export interface PlayerScore {
+  /** points of every race ever driven (the global board sorts on this) */
+  total: number;
+  /** races that were scored */
+  runs: number;
+  wins: number;
+  /** best single run per race mode (the mode boards sort on this) */
+  best: Record<string, number>;
 }
 
 const KEY = "hc_player_v1";
@@ -47,6 +59,7 @@ export const DEFAULT_PLAYER: PlayerState = {
   totalRuns: 0,
   raceWins: {},
   raceCount: 0,
+  score: { total: 0, runs: 0, wins: 0, best: {} },
 };
 
 export function loadPlayer(): PlayerState {
@@ -76,6 +89,11 @@ export function loadPlayer(): PlayerState {
       daily: { ...DEFAULT_DAILY, ...(parsed.daily ?? {}) },
       raceWins: { ...(parsed.raceWins ?? {}) },
       raceCount: parsed.raceCount ?? 0,
+      score: {
+        ...DEFAULT_PLAYER.score,
+        ...(parsed.score ?? {}),
+        best: { ...(parsed.score?.best ?? {}) },
+      },
     };
   } catch {
     return DEFAULT_PLAYER;

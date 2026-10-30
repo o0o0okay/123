@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState, type ReactNode } from "react";
+import { useEffect, useMemo, useRef, useState, type ReactNode } from "react";
 import { cn } from "@/utils/cn";
 import { BRANDS, carTitle, ppOf, type BrandId, type Car, type CarStats, type Drive } from "@/data/cars";
 import { fmt, type Lang, type Strings } from "@/i18n";
@@ -12,6 +12,7 @@ import {
   CoinIcon,
   FilterIcon,
   GaugeIcon,
+  InfoIcon,
   KeyIcon,
   NitroIcon,
   CompareIcon,
@@ -25,7 +26,8 @@ import {
 import { PaintedImg } from "./PaintContext";
 import { CompareButton, CompareModal, type CompareEntry } from "./CarCompare";
 import { BrandBadge } from "./DealerBits";
-import { Toggle } from "./ui";
+import { CarDetails } from "./CarDetails";
+import { Modal, Toggle } from "./ui";
 
 export type SortKey = "price-asc" | "price-desc" | "pp-asc" | "pp-desc" | "bhp-desc" | "name-asc" | "year-desc";
 export type MarketMode = "buy" | "sell";
@@ -275,6 +277,10 @@ export function Dealership({
   /** ids of the two cars in the comparison (max 2) */
   const [compareIds, setCompareIds] = useState<string[]>([]);
   const [compareOpen, setCompareOpen] = useState(false);
+  /** mobile only: the details sheet of the selected car */
+  const [detailsOpen, setDetailsOpen] = useState(false);
+  /** the scrolling card container — used to move the selection with the arrow keys */
+  const gridRef = useRef<HTMLDivElement | null>(null);
 
   const animatedCoins = useAnimatedNumber(coins);
   const { isPulsing } = useCoinFly();
@@ -387,6 +393,37 @@ export function Dealership({
     if (c.id !== selected?.id) onSfx?.("swoosh");
     setSelectedId(c.id);
   };
+  /** how many cards sit on one row of the grid (1 when it cannot be measured) */
+  const columnsOfGrid = (grid: HTMLElement): number => {
+    const tiles = Array.from(grid.querySelectorAll<HTMLElement>("[data-car-tile]"));
+    if (tiles.length < 2) return 1;
+    // a real layout tells us: every tile of the first row shares the same offsetTop
+    const firstTop = tiles[0].offsetTop;
+    const firstRow = tiles.filter((t) => t.offsetTop === firstTop).length;
+    if (firstRow > 1 && firstRow < tiles.length) return firstRow;
+    // fall back to the width of one card against the visible width of the grid
+    const cardW = tiles[0].getBoundingClientRect().width;
+    const gridW = grid.getBoundingClientRect().width;
+    if (cardW > 4 && gridW > 4) return Math.max(1, Math.round((gridW + 14) / (cardW + 14)));
+    return 1;
+  };
+
+  /** a right-to-left grid flows the other way, so ← and → swap meaning for those players */
+  const gridIsRtl = (grid: HTMLElement | null): boolean => {
+    if (!grid) return false;
+    const dir = grid.closest("[dir]")?.getAttribute("dir");
+    if (dir) return dir === "rtl";
+    return typeof getComputedStyle === "function" && getComputedStyle(grid).direction === "rtl";
+  };
+
+  /** keeps the newly selected card visible inside the grid (never scrolls the page) */
+  const revealSelection = (id: string) => {
+    const grid = gridRef.current;
+    if (!grid) return;
+    const tile = Array.from(grid.querySelectorAll<HTMLElement>("[data-car-tile]")).find((t) => t.dataset.carTile === id);
+    tile?.scrollIntoView?.({ block: "nearest", inline: "nearest" });
+  };
+
   /** double-click / primary button behaviour */
   const primary = (car: Car) => {
     const isOwned = owned.includes(car.id);
@@ -400,6 +437,70 @@ export function Dealership({
     }
     onBuy(car);
   };
+
+  /* ---------------- keyboard: arrow keys move the selection ---------------- */
+  const keyHandlers = useRef<{ primary: (car: Car) => void; selected: Car | null }>({
+    primary: () => undefined,
+    selected: null,
+  });
+  keyHandlers.current.primary = primary;
+  keyHandlers.current.selected = selected;
+
+  useEffect(() => {
+    // modals own the keyboard while they are open
+    if (compareOpen || drawer || detailsOpen) return;
+
+    const onKey = (e: KeyboardEvent) => {
+      const el = e.target as HTMLElement | null;
+      const tag = el?.tagName;
+      if (tag === "INPUT" || tag === "TEXTAREA" || tag === "SELECT" || el?.isContentEditable) return;
+
+      if (e.key === "Enter") {
+        const car = keyHandlers.current.selected;
+        if (!car) return;
+        e.preventDefault();
+        keyHandlers.current.primary(car);
+        return;
+      }
+
+      const keys = ["ArrowLeft", "ArrowRight", "ArrowUp", "ArrowDown", "Home", "End"];
+      if (!keys.includes(e.key) || !list.length) return;
+      e.preventDefault();
+
+      const grid = gridRef.current;
+      const cols = grid ? columnsOfGrid(grid) : 1;
+      const hDir = grid && gridIsRtl(grid) ? -1 : 1;
+      const idx = Math.max(0, list.findIndex((c) => c.id === selected?.id));
+      let next = idx;
+      if (e.key === "Home") next = 0;
+      else if (e.key === "End") next = list.length - 1;
+      else if (e.key === "ArrowUp") next = idx - cols;
+      else if (e.key === "ArrowDown") next = idx + cols;
+      else if (e.key === "ArrowLeft") next = idx - hDir;
+      else next = idx + hDir;
+
+      next = Math.max(0, Math.min(list.length - 1, next));
+      if (next === idx) return;
+      onSfx?.("toggle");
+      setSelectedId(list[next].id);
+      revealSelection(list[next].id);
+    };
+
+    window.addEventListener("keydown", onKey);
+    return () => window.removeEventListener("keydown", onKey);
+  });
+
+  /* Escape closes the details sheet before the dealership itself */
+  useEffect(() => {
+    if (!detailsOpen) return;
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key !== "Escape") return;
+      e.stopImmediatePropagation();
+      setDetailsOpen(false);
+    };
+    window.addEventListener("keydown", onKey, true);
+    return () => window.removeEventListener("keydown", onKey, true);
+  }, [detailsOpen]);
 
   /* ---------------- comparison ---------------- */
   const toEntry = (car: Car): CompareEntry => {
@@ -602,6 +703,8 @@ export function Dealership({
       <div key={car.id} className="flex min-w-0 flex-col">
         <button
           type="button"
+          data-car-tile={car.id}
+          data-selected={isSel || undefined}
           onClick={() => select(car)}
           onDoubleClick={() => primary(car)}
           aria-label={carTitle(car)}
@@ -695,13 +798,26 @@ export function Dealership({
     <div
       className={cn(
         "grid items-start gap-x-[14px] gap-y-[18px]",
-        desk ? "grid-cols-[repeat(auto-fill,minmax(164px,1fr))]" : "grid-cols-2 gap-x-[12px] gap-y-[16px]",
+        desk ? "grid-cols-[repeat(auto-fill,minmax(158px,1fr))]" : "grid-cols-2 gap-x-[12px] gap-y-[16px]",
       )}
     >
       {list.map(renderCard)}
     </div>
   ) : (
     emptyState
+  );
+
+  const detailsOf = (car: Car) => (
+    <CarDetails
+      t={t}
+      lang={lang}
+      car={car}
+      stats={statsOf(car)}
+      mode={mode}
+      price={mode === "sell" ? sellValueOf(car) : car.price}
+      equipped={car.id === activeId}
+      desk={desk}
+    />
   );
 
   const stat = (icon: ReactNode, label: string, value: number, color: string) => (
@@ -723,11 +839,27 @@ export function Dealership({
     >
       <div
         className={cn(
-          "flex shrink-0 items-center justify-center rounded-[12px] border-[2px] border-ink bg-[radial-gradient(ellipse_at_center,#2f5fc4,#14204f_75%)]",
+          "relative flex shrink-0 items-center justify-center rounded-[12px] border-[2px] border-ink bg-[radial-gradient(ellipse_at_center,#2f5fc4,#14204f_75%)]",
           desk ? "h-[56px] w-[96px]" : "h-[48px] w-[74px]",
         )}
       >
         <PaintedImg carId={selected.id} src={selected.image} alt="" className="max-h-[88%] max-w-[90%] object-contain" />
+        {/* on mobile the same panel is a sheet, opened from here */}
+        {!desk && (
+          <button
+            type="button"
+            id="dealer-details-btn"
+            onClick={() => {
+              click();
+              setDetailsOpen(true);
+            }}
+            aria-label={t.details}
+            title={t.details}
+            className="absolute -bottom-[6px] -right-[6px] flex h-[22px] w-[22px] items-center justify-center rounded-full border-[2px] border-ink bg-skyg-400 text-ink shadow-[0_2px_0_#0a1038] transition-transform active:translate-y-[1px]"
+          >
+            <InfoIcon width={13} height={13} />
+          </button>
+        )}
       </div>
       <div className="min-w-0 flex-1">
         <div className="flex items-center gap-[6px]" dir="ltr">
@@ -844,7 +976,17 @@ export function Dealership({
                     {fmt(t.resultsCount, { n: list.length })}
                   </div>
                 </div>
-                <div className="no-scrollbar min-h-0 flex-1 overflow-y-auto pb-[10px] pe-[4px] pt-[14px]">{grid}</div>
+                <div className="flex min-h-0 flex-1 gap-[14px] pt-[14px]">
+                  <div ref={gridRef} className="no-scrollbar min-h-0 flex-1 overflow-y-auto pb-[10px] pe-[4px]">
+                    {grid}
+                  </div>
+                  <aside
+                    id="dealer-details-panel"
+                    className="thin-scroll w-[216px] shrink-0 overflow-y-auto rounded-[18px] border-[3px] border-ink bg-navy-950/60 p-[9px] pb-[11px] shadow-[0_5px_0_#060a28]"
+                  >
+                    {selected ? detailsOf(selected) : null}
+                  </aside>
+                </div>
               </section>
             </div>
           </>
@@ -905,13 +1047,22 @@ export function Dealership({
               ))}
             </div>
 
-            <div className="no-scrollbar mt-[4px] min-h-0 flex-1 overflow-y-auto px-[14px] pb-[10px] pt-[14px]">{grid}</div>
+            <div ref={gridRef} className="no-scrollbar mt-[4px] min-h-0 flex-1 overflow-y-auto px-[14px] pb-[10px] pt-[14px]">
+              {grid}
+            </div>
           </>
         )}
 
         {actionBar}
         {ticker}
       </div>
+
+      {/* mobile: details of the selected car */}
+      {!desk && detailsOpen && selected && (
+        <Modal title={t.details} onClose={() => setDetailsOpen(false)} width={330}>
+          <div className="thin-scroll max-h-[58vh] overflow-y-auto pe-[2px]">{detailsOf(selected)}</div>
+        </Modal>
+      )}
 
       {/* comparison tray */}
       {compareIds.length > 0 && !compareOpen && (

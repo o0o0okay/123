@@ -3,7 +3,7 @@ import { cn } from "@/utils/cn";
 import type { Car, UpgradeKey } from "@/data/cars";
 import { UPGRADES, carStats, upgradeCost } from "@/data/cars";
 import type { Lang, Strings } from "@/i18n";
-import { useAnimatedNumber } from "@/hooks";
+import { useAnimatedNumber, useDragScroll } from "@/hooks";
 import { useCoinFly } from "./CoinFlyEffect";
 import { BumperIcon, CoinIcon, EngineIcon, GaugeIcon, LockIcon, NitroIcon, PowerIcon, TireIcon } from "@/icons";
 import { PaintRow } from "./PaintShop";
@@ -404,14 +404,22 @@ export function CarPicker({
   onSelect: (i: number) => void;
   labels: { select: string; selected: string };
 }) {
+  const scroll = useDragScroll(activeId, cars.length);
   return (
-    <div className="no-scrollbar flex shrink-0 gap-[8px] overflow-x-auto pb-[11px] pt-[2px]" dir="ltr">
+    <div
+      ref={scroll.ref}
+      {...scroll.dragProps}
+      className="drag-x no-scrollbar flex shrink-0 gap-[8px] overflow-x-auto pb-[11px] pt-[2px]"
+      dir="ltr"
+    >
       {cars.map((c, i) => {
         const active = c.id === activeId;
         return (
           <button
             key={c.id}
             type="button"
+            aria-current={active}
+            data-active={active}
             onClick={() => onSelect(i)}
             className={cn(
               "relative flex h-[52px] w-[76px] shrink-0 items-center justify-center rounded-[14px] border-[3px] transition-all",

@@ -3,7 +3,7 @@ import { cn } from "@/utils/cn";
 import { carStats, type Car, type CarStats } from "@/data/cars";
 import type { Lang, Strings } from "@/i18n";
 import type { Settings } from "@/settings";
-import { useAnimatedNumber, useFullscreen } from "@/hooks";
+import { useAnimatedNumber, useDragScroll, useFullscreen } from "@/hooks";
 import { useCoinFly } from "./CoinFlyEffect";
 import { shortenAddress, type SolanaWalletInfo } from "@/solana";
 import {
@@ -419,8 +419,14 @@ function Roster({
   viewIdx: number;
   onSelect: (i: number) => void;
 }) {
+  const scroll = useDragScroll(viewIdx, ownedCars.length);
   return (
-    <div className="no-scrollbar absolute inset-x-[44px] top-0 z-10 overflow-x-auto" dir="ltr">
+    <div
+      ref={scroll.ref}
+      {...scroll.dragProps}
+      className="drag-x no-scrollbar absolute inset-x-[44px] top-0 z-10 overflow-x-auto"
+      dir="ltr"
+    >
       <div className="mx-auto flex w-max gap-[10px] px-[6px] pb-[6px] pt-[4px]">
         {ownedCars.map((c, i) => {
           const active = i === viewIdx;
@@ -428,6 +434,8 @@ function Roster({
             <button
               key={c.id}
               type="button"
+              aria-current={active}
+              data-active={active}
               aria-label={`${c.cls} ${c.name}`}
               title={`${c.cls} ${c.name}`}
               onClick={() => onSelect(i)}

@@ -147,6 +147,42 @@ html, body, #root {
 .no-scrollbar::-webkit-scrollbar { display: none; }
 .no-scrollbar { scrollbar-width: none; }
 
+/* ------------------------------------------------------------------ */
+/* Horizontal "grab & drag" rows (car picker, roster)                  */
+/* ------------------------------------------------------------------ */
+/* useDragScroll() drives these: mouse drag / wheel / native touch.    */
+/* `data-overflow` is set by the hook and drives the soft edge fade so */
+/* that a long garage visibly continues past the edge.                 */
+.drag-x {
+  /* both axes stay available so the panel behind the row can still be scrolled
+     vertically with a finger; the row itself pans horizontally on its own */
+  touch-action: manipulation;
+  overscroll-behavior-x: contain;
+  -webkit-overflow-scrolling: touch;
+}
+.drag-x[data-overflow="start"],
+.drag-x[data-overflow="end"],
+.drag-x[data-overflow="both"] {
+  cursor: grab;
+}
+.drag-x.is-dragging {
+  cursor: grabbing;
+  user-select: none;
+}
+.drag-x.is-dragging * {
+  cursor: grabbing !important;
+  pointer-events: none !important;
+}
+.drag-x[data-overflow="start"] {
+  mask-image: linear-gradient(to right, transparent 0, #000 20px);
+}
+.drag-x[data-overflow="end"] {
+  mask-image: linear-gradient(to left, transparent 0, #000 20px);
+}
+.drag-x[data-overflow="both"] {
+  mask-image: linear-gradient(to right, transparent 0, #000 20px, #000 calc(100% - 20px), transparent 100%);
+}
+
 /* Desktop affordances: pointer cursor + visible keyboard focus */
 button:not(:disabled),
 [role="switch"] {

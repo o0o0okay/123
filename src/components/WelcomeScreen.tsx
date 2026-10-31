@@ -1,7 +1,7 @@
 import { useState } from "react";
 import type { Car, CarStats } from "@/data/cars";
 import type { Lang, Strings } from "@/i18n";
-import { ArrowRightIcon, CopyIcon, CrosshairIcon, PlayIcon, SolanaIcon, StoreIcon, UndoIcon } from "@/icons";
+import { ArrowRightIcon, BoltIcon, CopyIcon, CrosshairIcon, PlayIcon, SolanaIcon, StoreIcon, UndoIcon } from "@/icons";
 import { shortenAddress } from "@/solana";
 import { TitleBanner } from "./TitleBanner";
 import { CarShowcase } from "./CarShowcase";
@@ -46,6 +46,7 @@ interface Props {
   onPrev: () => void;
   onNext: () => void;
   onOpenDealer: () => void;
+  onOpenStaking: () => void;
   /** opens the coin shop (buy coins with SOL) */
   onOpenCoinShop: () => void;
   onEquip: (car: Car) => void;
@@ -75,6 +76,7 @@ export function WelcomeScreen({
   onPrev,
   onNext,
   onOpenDealer,
+  onOpenStaking,
   onOpenCoinShop,
   onEquip,
   onStartChase,
@@ -159,6 +161,12 @@ export function WelcomeScreen({
           <span className="flex flex-col items-center gap-[2px] whitespace-nowrap font-display text-[12px] leading-none tracking-wide text-white t-stroke sw-3">
             <StoreIcon width={20} height={20} />
             {t.dealership}
+          </span>
+        </GameButton>
+        <GameButton variant="green" className="h-[66px] w-[96px]" onClick={onOpenStaking}>
+          <span className="flex flex-col items-center gap-[2px] whitespace-nowrap font-display text-[12px] leading-none tracking-wide text-[#04120c]">
+            <BoltIcon width={20} height={20} />
+            {t.staking}
           </span>
         </GameButton>
         <GameButton variant="grey" className="h-[66px] w-[112px]" onClick={onLogout}>

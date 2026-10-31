@@ -9,6 +9,7 @@ import { shortenAddress, type SolanaWalletInfo } from "@/solana";
 import {
   ArrowRightIcon,
   BackpackIcon,
+  BoltIcon,
   CartIcon,
   ClipboardIcon,
   CoinIcon,
@@ -62,6 +63,7 @@ export interface DesktopViewProps {
   onPrev: () => void;
   onNext: () => void;
   onOpenDealer: () => void;
+  onOpenStaking: () => void;
   /** opens the coin shop (buy coins with SOL) */
   onOpenCoinShop: () => void;
   onEquip: (car: Car) => void;
@@ -167,6 +169,18 @@ function TopBar(p: DesktopViewProps) {
           <StoreIcon width={20} height={20} />
           {t.dealership}
         </button>
+        {/* Staking (pools · staking · loans) */}
+        <button
+          type="button"
+          id="desktop-staking-btn"
+          onClick={p.onOpenStaking}
+          title={t.stakingSub}
+          className="flex h-[44px] items-center gap-[7px] rounded-full border-[3px] border-ink bg-gradient-to-b from-[#4bf5a0] to-[#16a86a] px-[14px] font-display text-[15px] tracking-wide text-[#04120c] shadow-[0_4px_0_#0b6a44] transition-all hover:-translate-y-[1px] hover:brightness-110 active:translate-y-[2px] active:shadow-none"
+        >
+          <BoltIcon width={18} height={18} />
+          {t.staking}
+        </button>
+
         {/* Top Shop / Coins Button with pulsating highlight & coin fly target */}
         <button
           type="button"

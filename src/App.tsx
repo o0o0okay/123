@@ -27,9 +27,33 @@ import { claimDaily, DEFAULT_DAILY, resolveDaily } from "./data/daily";
 import { TasksView, type TaskView } from "./components/TasksPanel";
 import { RaceView, type RaceProps } from "./components/RacePanel";
 import { SellConfirmModal } from "./components/DealerBits";
-import { LazyCoinShop, LazyDealership, LazyGate, LazyRaceOverlay, LazyWalletModal, preloadPanels } from "./components/lazy";
+import {
+  LazyCoinShop,
+  LazyDealership,
+  LazyGate,
+  LazyRaceOverlay,
+  LazyStaking,
+  LazyWalletModal,
+  preloadPanels,
+} from "./components/lazy";
 import { simulateRace, type RaceMode, type RaceResult } from "./data/races";
 import { ME_ID, type BoardEntry } from "./data/leaderboard";
+import {
+  LOAN_APR,
+  SINGLE_POOL_ID,
+  SINGLE_POOL_NAME,
+  aprForFee,
+  allPools,
+  debtOf,
+  earnedOf,
+  newId,
+  poolName,
+  type Loan,
+  type PoolInfo,
+  type StakePosition,
+  type StakeTier,
+  type TokenId,
+} from "./data/staking";
 import {
   BackpackIcon,
   GearIcon,
@@ -92,6 +116,8 @@ function AppContent({
   const [paintOpen, setPaintOpen] = useState(false);
   /** dealership overlay + car waiting for sale confirmation */
   const [dealerOpen, setDealerOpen] = useState(false);
+  /** staking / liquidity / loans overlay */
+  const [stakingOpen, setStakingOpen] = useState(false);
   const [sellTarget, setSellTarget] = useState<Car | null>(null);
   /** active race: mode + (null while running) result */
   const [coinShopOpen, setCoinShopOpen] = useState(false);
@@ -265,6 +291,186 @@ function AppContent({
     setDealerOpen(false);
   };
 
+  /* ---------------- staking / liquidity / loans ---------------- */
+  const openStaking = () => {
+    sfx("swoosh");
+    setStakingOpen(true);
+  };
+
+  const closeStaking = () => {
+    sfx("click");
+    setStakingOpen(false);
+  };
+
+  const now = () => Date.now();
+
+  /** money in: every defi action pays from the coin balance */
+  const spend = (amount: number) => coins >= amount && amount > 0;
+
+  const addLiquidity = (poolId: string, amount: number) => {
+    if (!spend(amount)) {
+      sfx("error");
+      showToast(t.notEnoughCoins, "error");
+      return false;
+    }
+    const pool = allPools(playerState.defi).find((p) => p.id === poolId);
+    sfx("coinJingle");
+    setPlayerState((p) => {
+      const existing = p.defi.positions.find((x) => x.poolId === poolId && x.kind === "lp");
+      const positions = existing
+        ? p.defi.positions.map((x) => (x.id === existing.id ? { ...x, amount: x.amount + amount } : x))
+        : [
+            ...p.defi.positions,
+            {
+              id: newId("lp"),
+              poolId,
+              kind: "lp" as const,
+              name: pool ? poolName(pool) : poolId,
+              amount,
+              apr: pool?.apr ?? 0.5,
+              startedAt: now(),
+              accruedAt: now(),
+              unlockAt: 0,
+            },
+          ];
+      return { ...p, coins: p.coins - amount, defi: { ...p.defi, positions } };
+    });
+    showToast(fmt(t.depositedToast, { n: amount.toLocaleString("en-US") }), "success");
+    return true;
+  };
+
+  const createPool = (a: TokenId, b: TokenId, fee: number, amount: number) => {
+    if (!spend(amount)) {
+      sfx("error");
+      showToast(t.notEnoughCoins, "error");
+      return false;
+    }
+    const pool: PoolInfo = {
+      id: newId(`p-${a}-${b}`),
+      a,
+      b,
+      fee,
+      apr: aprForFee(fee),
+      // a fresh pool is mostly virtual liquidity, the deposit is the real part
+      liquidity: Math.max(250_000, amount),
+      reward: 0,
+      custom: true,
+    };
+    sfx("coinJingle");
+    setPlayerState((p) => ({
+      ...p,
+      coins: p.coins - amount,
+      defi: {
+        ...p.defi,
+        pools: [pool, ...p.defi.pools],
+        positions: [
+          ...p.defi.positions,
+          {
+            id: newId("lp"),
+            poolId: pool.id,
+            kind: "lp" as const,
+            name: poolName(pool),
+            amount,
+            apr: pool.apr,
+            startedAt: now(),
+            accruedAt: now(),
+            unlockAt: 0,
+          },
+        ],
+      },
+    }));
+    showToast(fmt(t.poolCreatedToast, { n: poolName(pool) }), "success");
+    return true;
+  };
+
+  const stake = (amount: number, tier: StakeTier) => {
+    if (!spend(amount)) {
+      sfx("error");
+      showToast(t.notEnoughCoins, "error");
+      return false;
+    }
+    const at = now();
+    const position: StakePosition = {
+      id: newId("st"),
+      poolId: SINGLE_POOL_ID,
+      kind: "single",
+      name: SINGLE_POOL_NAME,
+      amount,
+      apr: tier.apr,
+      startedAt: at,
+      accruedAt: at,
+      unlockAt: at + tier.days * 86_400_000,
+    };
+    sfx("coinJingle");
+    setPlayerState((p) => ({ ...p, coins: p.coins - amount, defi: { ...p.defi, positions: [...p.defi.positions, position] } }));
+    showToast(fmt(t.stakedToast, { n: amount.toLocaleString("en-US") }), "success");
+    return true;
+  };
+
+  const claimPosition = (id: string) => {
+    const position = playerState.defi.positions.find((p) => p.id === id);
+    if (!position) return false;
+    const reward = Math.floor(earnedOf(position, now()));
+    // a fraction of a coin is not worth a transaction
+    if (reward < 1) {
+      return false;
+    }
+    sfx("coinJingle");
+    setPlayerState((p) => ({
+      ...p,
+      coins: p.coins + reward,
+      defi: {
+        ...p.defi,
+        positions: p.defi.positions.map((x) => (x.id === id ? { ...x, accruedAt: now() } : x)),
+      },
+    }));
+    showToast(fmt(t.claimedToast, { n: reward.toLocaleString("en-US") }), "success");
+    return true;
+  };
+
+  const withdrawPosition = (id: string) => {
+    const position = playerState.defi.positions.find((p) => p.id === id);
+    if (!position) return false;
+    if (position.unlockAt > now()) return false;
+    const payout = position.amount + Math.floor(earnedOf(position, now()));
+    sfx("coinJingle");
+    setPlayerState((p) => ({
+      ...p,
+      coins: p.coins + payout,
+      defi: { ...p.defi, positions: p.defi.positions.filter((x) => x.id !== id) },
+    }));
+    showToast(fmt(t.withdrawnToast, { n: payout.toLocaleString("en-US") }), "success");
+    return true;
+  };
+
+  const borrow = (amount: number, collateral: string[]) => {
+    if (amount <= 0 || !collateral.length) return false;
+    const loan: Loan = { id: newId("ln"), principal: amount, apr: LOAN_APR, borrowedAt: now(), collateral };
+    sfx("coinJingle");
+    setPlayerState((p) => ({ ...p, coins: p.coins + amount, defi: { ...p.defi, loans: [...p.defi.loans, loan] } }));
+    showToast(fmt(t.borrowedToast, { n: amount.toLocaleString("en-US") }), "success");
+    return true;
+  };
+
+  const repayLoan = (id: string) => {
+    const loan = playerState.defi.loans.find((l) => l.id === id);
+    if (!loan) return false;
+    const cost = Math.ceil(debtOf(loan, now()));
+    if (coins < cost) {
+      sfx("error");
+      showToast(t.notEnoughCoins, "error");
+      return false;
+    }
+    sfx("coinJingle");
+    setPlayerState((p) => ({
+      ...p,
+      coins: p.coins - cost,
+      defi: { ...p.defi, loans: p.defi.loans.filter((l) => l.id !== id) },
+    }));
+    showToast(fmt(t.repaidToast, { n: cost.toLocaleString("en-US") }), "success");
+    return true;
+  };
+
   /* ---------------- coin shop (buy coins with SOL) ---------------- */
   const openCoinShop = () => {
     sfx("click");
@@ -291,6 +497,11 @@ function AppContent({
 
   const requestSell = (car: Car) => {
     if (!owned.includes(car.id)) return;
+    if (playerState.defi.loans.some((l) => l.collateral.includes(car.id))) {
+      sfx("error");
+      showToast(t.collateralLocked, "error");
+      return;
+    }
     if (owned.length <= 1) {
       sfx("error");
       showToast(t.cantSellLast, "error");
@@ -689,6 +900,7 @@ function AppContent({
         if (sellTarget) return setSellTarget(null);
         if (buyTarget) return setBuyTarget(null);
         if (paintOpen) return setPaintOpen(false);
+        if (stakingOpen) return setStakingOpen(false);
         if (dealerOpen) return setDealerOpen(false);
         if (exitOpen) return setExitOpen(false);
         if (walletModalOpen) return setWalletModalOpen(false);
@@ -709,6 +921,7 @@ function AppContent({
         draftSettings ||
         screen === "loading" ||
         raceMode ||
+        stakingOpen ||
         dealerOpen ||
         coinShopOpen ||
         sellTarget ||
@@ -933,6 +1146,7 @@ function AppContent({
           onPrev={() => changeCar(-1)}
           onNext={() => changeCar(1)}
           onOpenDealer={openDealer}
+          onOpenStaking={openStaking}
           onOpenCoinShop={openCoinShop}
           onEquip={equip}
           screen={screen}
@@ -980,6 +1194,7 @@ function AppContent({
           onPrev={() => changeCar(-1)}
           onNext={() => changeCar(1)}
           onOpenDealer={openDealer}
+          onOpenStaking={openStaking}
           onOpenCoinShop={openCoinShop}
           onEquip={equip}
           onStartChase={startChase}
@@ -1025,6 +1240,30 @@ function AppContent({
             onSell={requestSell}
             onEquip={equip}
             onClose={closeDealer}
+            onSfx={(n) => sfx(n)}
+          />
+        </LazyGate>
+      )}
+
+      {/* staking: pools, token staking and collateral loans */}
+      {stakingOpen && (
+        <LazyGate resetKey={stakingOpen}>
+          <LazyStaking
+            t={t}
+            lang={lang}
+            layout={isDesktop ? "desktop" : "mobile"}
+            coins={coins}
+            ownedCars={ownedCars}
+            sellValueOf={sellValueOf}
+            defi={playerState.defi}
+            onAddLiquidity={addLiquidity}
+            onCreatePool={createPool}
+            onStake={stake}
+            onClaim={claimPosition}
+            onWithdraw={withdrawPosition}
+            onBorrow={borrow}
+            onRepay={repayLoan}
+            onClose={closeStaking}
             onSfx={(n) => sfx(n)}
           />
         </LazyGate>

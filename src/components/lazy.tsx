@@ -21,6 +21,10 @@ export const LazyRaceOverlay = lazy(() =>
   import("./RaceOverlay").then((m) => ({ default: m.RaceOverlay })),
 );
 
+export const LazyStaking = lazy(() =>
+  import("./Staking").then((m) => ({ default: m.Staking })),
+);
+
 export const LazyWalletModal = lazy(() =>
   import("./WalletModal").then((m) => ({ default: m.WalletModal })),
 );
@@ -71,6 +75,7 @@ export function preloadPanels() {
     void import("./CoinShop");
     void import("./Dealership");
     void import("./RaceOverlay");
+    void import("./Staking");
     void import("./WalletModal");
   };
   if (typeof window === "undefined") return;

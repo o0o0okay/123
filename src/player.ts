@@ -3,6 +3,7 @@ import { MAX_LEVEL, cars } from "./data/cars";
 import { STOCK_PAINT, type Paints } from "./data/paints";
 import { DEFAULT_TASK_PROGRESS, type TaskProgress } from "./data/tasks";
 import { DEFAULT_DAILY, type DailyState } from "./data/daily";
+import { DEFAULT_DEFI, type DefiState } from "./data/staking";
 
 export interface PlayerState {
   coins: number;
@@ -29,6 +30,8 @@ export interface PlayerState {
   raceCount: number;
   /** leaderboard score: lifetime points + the best single run of every mode */
   score: PlayerScore;
+  /** staking, liquidity pools and collateral-backed loans */
+  defi: DefiState;
 }
 
 export interface PlayerScore {
@@ -60,6 +63,7 @@ export const DEFAULT_PLAYER: PlayerState = {
   raceWins: {},
   raceCount: 0,
   score: { total: 0, runs: 0, wins: 0, best: {} },
+  defi: { positions: [], loans: [], pools: [] },
 };
 
 export function loadPlayer(): PlayerState {
@@ -93,6 +97,11 @@ export function loadPlayer(): PlayerState {
         ...DEFAULT_PLAYER.score,
         ...(parsed.score ?? {}),
         best: { ...(parsed.score?.best ?? {}) },
+      },
+      defi: {
+        positions: Array.isArray(parsed.defi?.positions) ? parsed.defi.positions : DEFAULT_DEFI.positions,
+        loans: Array.isArray(parsed.defi?.loans) ? parsed.defi.loans : DEFAULT_DEFI.loans,
+        pools: Array.isArray(parsed.defi?.pools) ? parsed.defi.pools : DEFAULT_DEFI.pools,
       },
     };
   } catch {

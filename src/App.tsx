@@ -46,10 +46,12 @@ import {
   type StakeTier,
   type TokenId,
 } from "./data/staking";
+import { nftById, nftSellValue, nftStakeEarned } from "./data/nft";
 import {
   BackpackIcon,
   BoltIcon,
   GearIcon,
+  StarBurstIcon,
   PhantomIcon,
   PlayIcon,
   SolanaIcon,
@@ -111,6 +113,10 @@ function AppContent({
   const [dealerOpen, setDealerOpen] = useState(false);
   /** staking / liquidity / loans overlay */
   const [stakingOpen, setStakingOpen] = useState(false);
+  /** NFT marketplace overlay */
+  const [nftOpen, setNftOpen] = useState(false);
+  /** which board the staking panel opens on (pools / stake / nft / loans) */
+  const [stakingTab, setStakingTab] = useState<"pools" | "stake" | "nft" | "loans">("pools");
   const [sellTarget, setSellTarget] = useState<Car | null>(null);
   /** active race: mode + (null while running) result */
   const [coinShopOpen, setCoinShopOpen] = useState(false);
@@ -289,12 +295,137 @@ function AppContent({
     sfx("swoosh");
     // start the chunk before the first render asks for it
     prefetch.staking();
+    setStakingTab("pools");
     setStakingOpen(true);
   };
 
   const closeStaking = () => {
     sfx("click");
     setStakingOpen(false);
+  };
+
+  /* ---------------- nft market / vault ---------------- */
+  const openNft = () => {
+    sfx("swoosh");
+    prefetch.nft();
+    setNftOpen(true);
+  };
+
+  const closeNft = () => {
+    sfx("click");
+    setNftOpen(false);
+  };
+
+  /** the vault lives inside staking, so the market hands over to it */
+  const openNftVault = () => {
+    sfx("swoosh");
+    prefetch.staking();
+    setNftOpen(false);
+    setStakingTab("nft");
+    setStakingOpen(true);
+  };
+
+  /** and the other way round: the vault sends the player to the market */
+  const openNftFromStaking = () => {
+    sfx("swoosh");
+    prefetch.nft();
+    setStakingOpen(false);
+    setNftOpen(true);
+  };
+
+  const ownedNfts = playerState.nft.owned.map((id) => nftById(id)).filter((n): n is NonNullable<typeof n> => !!n);
+
+  const buyNft = (id: string) => {
+    const item = nftById(id);
+    if (!item) return false;
+    if (playerState.nft.owned.includes(id)) return false;
+    if (coins < item.price) {
+      sfx("error");
+      showToast(t.notEnoughCoins, "error");
+      return false;
+    }
+    sfx("coinJingle");
+    setPlayerState((p) => ({
+      ...p,
+      coins: p.coins - item.price,
+      nft: { ...p.nft, owned: [...p.nft.owned, id] },
+    }));
+    showToast(fmt(t.nftBoughtToast, { n: item.name }), "success");
+    return true;
+  };
+
+  const sellNft = (id: string) => {
+    const item = nftById(id);
+    if (!item) return false;
+    if (!playerState.nft.owned.includes(id)) return false;
+    if (playerState.nft.stakes.some((x) => x.nftId === id)) {
+      sfx("error");
+      showToast(t.nftLocked, "error");
+      return false;
+    }
+    const payout = nftSellValue(item);
+    sfx("coinJingle");
+    setPlayerState((p) => ({
+      ...p,
+      coins: p.coins + payout,
+      nft: { ...p.nft, owned: p.nft.owned.filter((x) => x !== id) },
+    }));
+    showToast(fmt(t.nftSoldToast, { n: payout.toLocaleString("en-US") }), "success");
+    return true;
+  };
+
+  const stakeNft = (id: string) => {
+    const item = nftById(id);
+    if (!item) return false;
+    if (!playerState.nft.owned.includes(id)) return false;
+    if (playerState.nft.stakes.some((x) => x.nftId === id)) return false;
+    const at = now();
+    sfx("coinJingle");
+    setPlayerState((p) => ({
+      ...p,
+      nft: {
+        ...p.nft,
+        stakes: [...p.nft.stakes, { id: newId("ns"), nftId: id, startedAt: at, accruedAt: at }],
+      },
+    }));
+    showToast(fmt(t.nftStakedToast, { n: item.name }), "success");
+    return true;
+  };
+
+  const claimNftStake = (stakeId: string) => {
+    const stake = playerState.nft.stakes.find((x) => x.id === stakeId);
+    const item = stake ? nftById(stake.nftId) : undefined;
+    if (!stake || !item) return false;
+    const reward = Math.floor(nftStakeEarned(stake, item, now()));
+    if (reward < 1) {
+      sfx("error");
+      showToast(fmt(t.tooSmall, { n: "1" }), "error");
+      return false;
+    }
+    sfx("coinJingle");
+    setPlayerState((p) => ({
+      ...p,
+      coins: p.coins + reward,
+      nft: {
+        ...p.nft,
+        stakes: p.nft.stakes.map((x) => (x.id === stakeId ? { ...x, accruedAt: now() } : x)),
+      },
+    }));
+    showToast(fmt(t.nftClaimedToast, { n: reward.toLocaleString("en-US") }), "success");
+    return true;
+  };
+
+  const unstakeNft = (stakeId: string) => {
+    const stake = playerState.nft.stakes.find((x) => x.id === stakeId);
+    const item = stake ? nftById(stake.nftId) : undefined;
+    if (!stake || !item) return false;
+    sfx("swoosh");
+    setPlayerState((p) => ({
+      ...p,
+      nft: { ...p.nft, stakes: p.nft.stakes.filter((x) => x.id !== stakeId) },
+    }));
+    showToast(fmt(t.nftUnstakedToast, { n: item.name }), "success");
+    return true;
   };
 
   const now = () => Date.now();
@@ -895,6 +1026,7 @@ function AppContent({
         if (sellTarget) return setSellTarget(null);
         if (buyTarget) return setBuyTarget(null);
         if (paintOpen) return setPaintOpen(false);
+        if (nftOpen) return setNftOpen(false);
         if (stakingOpen) return setStakingOpen(false);
         if (dealerOpen) return setDealerOpen(false);
         if (exitOpen) return setExitOpen(false);
@@ -916,6 +1048,7 @@ function AppContent({
         draftSettings ||
         screen === "loading" ||
         raceMode ||
+        nftOpen ||
         stakingOpen ||
         dealerOpen ||
         coinShopOpen ||
@@ -1064,50 +1197,70 @@ function AppContent({
         </div>
       </section>
 
-      {/* actions: DEALERSHIP · CONNECT · OPTIONS */}
-      <section className="flex shrink-0 items-end justify-center gap-[12px] px-[18px] pb-[12px] pt-[12px]">
-        <GameButton variant="green" className="h-[68px] w-[134px]" onClick={openDealer}>
-          <span className="flex flex-col items-center gap-[2px] whitespace-nowrap font-display text-[13px] leading-none tracking-wide text-white t-stroke sw-3">
-            <StoreIcon width={22} height={22} />
-            {t.dealership}
-          </span>
-        </GameButton>
-
-        <GameButton variant="orange" className="h-[80px] w-[216px] animate-glow" disabled={connecting} onClick={connectDefault}>
-          <span className="flex items-center gap-[10px]">
-            <span className="relative flex h-[46px] w-[46px] items-center justify-center rounded-full border-[3px] border-ink bg-gradient-to-b from-[#9ef05a] to-[#3d9a1f] text-white shadow-[0_3px_0_#1f5a10]">
-              <WalletIcon width={28} height={28} className="text-[#dfe6f3]" />
+      {/* actions: CONNECT on top, the three markets + options below */}
+      <section className="shrink-0 space-y-[8px] px-[18px] pb-[12px] pt-[10px]">
+        <GameButton variant="orange" className="h-[72px] w-full animate-glow" disabled={connecting} onClick={connectDefault}>
+          <span className="flex items-center justify-center gap-[10px]">
+            <span className="relative flex h-[42px] w-[42px] items-center justify-center rounded-full border-[3px] border-ink bg-gradient-to-b from-[#9ef05a] to-[#3d9a1f] text-white shadow-[0_3px_0_#1f5a10]">
+              <WalletIcon width={26} height={26} className="text-[#dfe6f3]" />
               <PlayIcon
-                width={18}
-                height={18}
+                width={16}
+                height={16}
                 className="absolute -bottom-[5px] -right-[5px] rounded-full border-[2px] border-ink bg-mint-400 p-[2px] text-ink"
               />
             </span>
-            <span className="font-display text-[26px] tracking-wide text-flame-500 t-stroke sw-5 sc-white">
+            <span className="font-display text-[24px] tracking-wide text-flame-500 t-stroke sw-5 sc-white">
               {connecting ? t.connectingWallet : t.connectWallet.split(" ")[0]}
             </span>
           </span>
         </GameButton>
 
-        <GameButton
-          variant="green"
-          className="h-[68px] w-[104px]"
-          id="mobile-login-staking-btn"
-          onClick={openStaking}
-          onPointerEnter={() => prefetch.staking()}
-        >
-          <span className="flex flex-col items-center gap-[2px] font-display text-[12px] leading-none tracking-wide text-[#04120c]">
-            <BoltIcon width={20} height={20} />
-            {t.staking}
-          </span>
-        </GameButton>
+        <div className="flex items-stretch justify-center gap-[8px]">
+          <GameButton
+            variant="green"
+            className="h-[56px] flex-1"
+            id="mobile-login-nft-btn"
+            onClick={openNft}
+            onPointerEnter={() => prefetch.nft()}
+          >
+            <span className="flex flex-col items-center gap-[1px] font-display text-[11px] leading-none tracking-wide text-white t-stroke sw-3">
+              <StarBurstIcon width={18} height={18} />
+              {t.nft}
+            </span>
+          </GameButton>
 
-        <GameButton variant="grey" className="h-[68px] w-[100px]" onClick={openOptions}>
-          <span className="flex flex-col items-center gap-[2px] font-display text-[15px] leading-none tracking-wide text-white t-stroke sw-3">
-            <GearIcon width={22} height={22} className="text-white" />
-            {t.options}
-          </span>
-        </GameButton>
+          <GameButton
+            variant="blue"
+            className="h-[56px] flex-1"
+            onClick={openDealer}
+            onPointerEnter={() => prefetch.dealership()}
+          >
+            <span className="flex flex-col items-center gap-[1px] whitespace-nowrap font-display text-[11px] leading-none tracking-wide text-[#04182c]">
+              <StoreIcon width={18} height={18} />
+              {t.dealership}
+            </span>
+          </GameButton>
+
+          <GameButton
+            variant="green"
+            className="h-[56px] flex-1"
+            id="mobile-login-staking-btn"
+            onClick={openStaking}
+            onPointerEnter={() => prefetch.staking()}
+          >
+            <span className="flex flex-col items-center gap-[1px] font-display text-[11px] leading-none tracking-wide text-[#04120c]">
+              <BoltIcon width={18} height={18} />
+              {t.staking}
+            </span>
+          </GameButton>
+
+          <GameButton variant="grey" className="h-[56px] flex-1" onClick={openOptions}>
+            <span className="flex flex-col items-center gap-[1px] font-display text-[11px] leading-none tracking-wide text-white t-stroke sw-3">
+              <GearIcon width={18} height={18} className="text-white" />
+              {t.options}
+            </span>
+          </GameButton>
+        </div>
       </section>
 
       <BottomBar
@@ -1155,6 +1308,7 @@ function AppContent({
           onNext={() => changeCar(1)}
           onOpenDealer={openDealer}
           onOpenStaking={openStaking}
+          onOpenNft={openNft}
           onOpenCoinShop={openCoinShop}
           onEquip={equip}
           screen={screen}
@@ -1203,6 +1357,7 @@ function AppContent({
           onNext={() => changeCar(1)}
           onOpenDealer={openDealer}
           onOpenStaking={openStaking}
+          onOpenNft={openNft}
           onOpenCoinShop={openCoinShop}
           onEquip={equip}
           onStartChase={startChase}
@@ -1259,6 +1414,28 @@ function AppContent({
         />
       )}
 
+      {/* nft market: buy & sell car tokens */}
+      {nftOpen && (
+        <LazyPanel
+          id="nft"
+          load={panels.nft}
+          label={t.nft}
+          props={{
+            t,
+            lang,
+            layout: isDesktop ? "desktop" : "mobile",
+            coins,
+            owned: playerState.nft.owned,
+            staked: playerState.nft.stakes.map((x) => x.nftId),
+            onBuy: buyNft,
+            onSell: sellNft,
+            onClose: closeNft,
+            onSfx: (n) => sfx(n),
+            onOpenVault: openNftVault,
+          }}
+        />
+      )}
+
       {/* staking: pools, token staking and collateral loans */}
       {stakingOpen && (
         <LazyPanel
@@ -1280,6 +1457,13 @@ function AppContent({
             onWithdraw: withdrawPosition,
             onBorrow: borrow,
             onRepay: repayLoan,
+            nfts: ownedNfts,
+            nftStakes: playerState.nft.stakes,
+            onStakeNft: stakeNft,
+            onClaimNft: claimNftStake,
+            onUnstakeNft: unstakeNft,
+            onOpenNft: openNftFromStaking,
+            initialTab: stakingTab,
             onClose: closeStaking,
             onSfx: (n) => sfx(n),
           }}

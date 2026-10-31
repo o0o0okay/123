@@ -4,6 +4,7 @@ import { STOCK_PAINT, type Paints } from "./data/paints";
 import { DEFAULT_TASK_PROGRESS, type TaskProgress } from "./data/tasks";
 import { DEFAULT_DAILY, type DailyState } from "./data/daily";
 import { DEFAULT_DEFI, type DefiState } from "./data/staking";
+import { DEFAULT_NFT, nftById, type NftState } from "./data/nft";
 
 export interface PlayerState {
   coins: number;
@@ -32,6 +33,8 @@ export interface PlayerState {
   score: PlayerScore;
   /** staking, liquidity pools and collateral-backed loans */
   defi: DefiState;
+  /** car tokens owned in the NFT market + the ones staked in the vault */
+  nft: NftState;
 }
 
 export interface PlayerScore {
@@ -64,6 +67,7 @@ export const DEFAULT_PLAYER: PlayerState = {
   raceCount: 0,
   score: { total: 0, runs: 0, wins: 0, best: {} },
   defi: { positions: [], loans: [], pools: [] },
+  nft: { ...DEFAULT_NFT },
 };
 
 export function loadPlayer(): PlayerState {
@@ -102,6 +106,10 @@ export function loadPlayer(): PlayerState {
         positions: Array.isArray(parsed.defi?.positions) ? parsed.defi.positions : DEFAULT_DEFI.positions,
         loans: Array.isArray(parsed.defi?.loans) ? parsed.defi.loans : DEFAULT_DEFI.loans,
         pools: Array.isArray(parsed.defi?.pools) ? parsed.defi.pools : DEFAULT_DEFI.pools,
+      },
+      nft: {
+        owned: Array.isArray(parsed.nft?.owned) ? parsed.nft.owned.filter((id) => nftById(id)) : DEFAULT_NFT.owned,
+        stakes: Array.isArray(parsed.nft?.stakes) ? parsed.nft.stakes.filter((s) => nftById(s.nftId)) : DEFAULT_NFT.stakes,
       },
     };
   } catch {

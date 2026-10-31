@@ -52,6 +52,8 @@ export interface StakePosition {
   apr: number;
   /** when the position was opened (drives the lock countdown) */
   startedAt: number;
+  /** last time money went in; a top-up moves the row back to the top of the list */
+  updatedAt?: number;
   /** earnings accrue from here; a claim moves it to "now" */
   accruedAt: number;
   /** 0 = flexible, otherwise the earliest withdrawal time */

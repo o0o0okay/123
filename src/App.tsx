@@ -313,7 +313,7 @@ function AppContent({
     setPlayerState((p) => {
       const existing = p.defi.positions.find((x) => x.poolId === poolId && x.kind === "lp");
       const positions = existing
-        ? p.defi.positions.map((x) => (x.id === existing.id ? { ...x, amount: x.amount + amount } : x))
+        ? p.defi.positions.map((x) => (x.id === existing.id ? { ...x, amount: x.amount + amount, updatedAt: now() } : x))
         : [
             ...p.defi.positions,
             {

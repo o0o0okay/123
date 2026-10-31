@@ -27,6 +27,7 @@ import {
   WalletIcon,
 } from "@/icons";
 import { HexEmblem, TitleBanner } from "./TitleBanner";
+import { prefetch } from "./lazy";
 import { CarShowcase } from "./CarShowcase";
 import { GarageView, type GarageData } from "./GaragePanel";
 import { TasksPanel, type TaskView } from "./TasksPanel";
@@ -163,6 +164,8 @@ function TopBar(p: DesktopViewProps) {
           type="button"
           id="desktop-dealer-btn"
           onClick={p.onOpenDealer}
+          onPointerEnter={() => prefetch.dealership()}
+          onFocus={() => prefetch.dealership()}
           title={t.dealerSub}
           className="flex h-[44px] items-center gap-[7px] rounded-full border-[3px] border-ink bg-gradient-to-b from-[#ffd23a] to-[#ff9a1f] px-[14px] font-display text-[15px] tracking-wide text-ink shadow-[0_4px_0_#9a4a08] transition-all hover:-translate-y-[1px] hover:brightness-110 active:translate-y-[2px] active:shadow-none"
         >
@@ -174,6 +177,8 @@ function TopBar(p: DesktopViewProps) {
           type="button"
           id="desktop-staking-btn"
           onClick={p.onOpenStaking}
+          onPointerEnter={() => prefetch.staking()}
+          onFocus={() => prefetch.staking()}
           title={t.stakingSub}
           className="flex h-[44px] items-center gap-[7px] rounded-full border-[3px] border-ink bg-gradient-to-b from-[#4bf5a0] to-[#16a86a] px-[14px] font-display text-[15px] tracking-wide text-[#04120c] shadow-[0_4px_0_#0b6a44] transition-all hover:-translate-y-[1px] hover:brightness-110 active:translate-y-[2px] active:shadow-none"
         >

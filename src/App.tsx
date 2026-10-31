@@ -27,15 +27,7 @@ import { claimDaily, DEFAULT_DAILY, resolveDaily } from "./data/daily";
 import { TasksView, type TaskView } from "./components/TasksPanel";
 import { RaceView, type RaceProps } from "./components/RacePanel";
 import { SellConfirmModal } from "./components/DealerBits";
-import {
-  LazyCoinShop,
-  LazyDealership,
-  LazyGate,
-  LazyRaceOverlay,
-  LazyStaking,
-  LazyWalletModal,
-  preloadPanels,
-} from "./components/lazy";
+import { LazyPanel, panels, prefetch, preloadPanels } from "./components/lazy";
 import { simulateRace, type RaceMode, type RaceResult } from "./data/races";
 import { ME_ID, type BoardEntry } from "./data/leaderboard";
 import {
@@ -56,6 +48,7 @@ import {
 } from "./data/staking";
 import {
   BackpackIcon,
+  BoltIcon,
   GearIcon,
   PhantomIcon,
   PlayIcon,
@@ -294,6 +287,8 @@ function AppContent({
   /* ---------------- staking / liquidity / loans ---------------- */
   const openStaking = () => {
     sfx("swoosh");
+    // start the chunk before the first render asks for it
+    prefetch.staking();
     setStakingOpen(true);
   };
 
@@ -1094,7 +1089,20 @@ function AppContent({
           </span>
         </GameButton>
 
-        <GameButton variant="green" className="h-[68px] w-[126px]" onClick={openOptions}>
+        <GameButton
+          variant="green"
+          className="h-[68px] w-[104px]"
+          id="mobile-login-staking-btn"
+          onClick={openStaking}
+          onPointerEnter={() => prefetch.staking()}
+        >
+          <span className="flex flex-col items-center gap-[2px] font-display text-[12px] leading-none tracking-wide text-[#04120c]">
+            <BoltIcon width={20} height={20} />
+            {t.staking}
+          </span>
+        </GameButton>
+
+        <GameButton variant="grey" className="h-[68px] w-[100px]" onClick={openOptions}>
           <span className="flex flex-col items-center gap-[2px] font-display text-[15px] leading-none tracking-wide text-white t-stroke sw-3">
             <GearIcon width={22} height={22} className="text-white" />
             {t.options}
@@ -1207,80 +1215,92 @@ function AppContent({
 
       {/* race overlay */}
       {raceMode && (
-        <LazyGate resetKey={raceMode?.id}>
-          <LazyRaceOverlay
-            t={t}
-            lang={lang}
-            mode={raceMode}
-            car={activeCar}
-            result={raceResult}
-            best={raceBest}
-            onCollect={collectRacePrize}
-            onAgain={raceAgain}
-            onClose={closeRace}
-            onStageTick={() => sfx("swoosh")}
-          />
-        </LazyGate>
+        <LazyPanel
+          id="raceOverlay"
+          load={panels.raceOverlay}
+          label={raceMode.title[lang]}
+          props={{
+            t,
+            lang,
+            mode: raceMode,
+            car: activeCar,
+            result: raceResult,
+            best: raceBest,
+            onCollect: collectRacePrize,
+            onAgain: raceAgain,
+            onClose: closeRace,
+            onStageTick: () => sfx("swoosh"),
+          }}
+        />
       )}
 
       {/* dealership: buy & sell with search / sort / filter sidebar */}
       {dealerOpen && (
-        <LazyGate resetKey={dealerOpen}>
-          <LazyDealership
-            t={t}
-            lang={lang}
-            layout={isDesktop ? "desktop" : "mobile"}
-            cars={cars}
-            owned={owned}
-            activeId={activeCar.id}
-            coins={coins}
-            sellValueOf={sellValueOf}
-            statsOf={(c) => carStats(c, levelsOf(playerState, c.id))}
-            onBuy={requestBuy}
-            onSell={requestSell}
-            onEquip={equip}
-            onClose={closeDealer}
-            onSfx={(n) => sfx(n)}
-          />
-        </LazyGate>
+        <LazyPanel
+          id="dealership"
+          load={panels.dealership}
+          label={t.dealership}
+          props={{
+            t,
+            lang,
+            layout: isDesktop ? "desktop" : "mobile",
+            cars,
+            owned,
+            activeId: activeCar.id,
+            coins,
+            sellValueOf,
+            statsOf: (c: Car) => carStats(c, levelsOf(playerState, c.id)),
+            onBuy: requestBuy,
+            onSell: requestSell,
+            onEquip: equip,
+            onClose: closeDealer,
+            onSfx: (n) => sfx(n),
+          }}
+        />
       )}
 
       {/* staking: pools, token staking and collateral loans */}
       {stakingOpen && (
-        <LazyGate resetKey={stakingOpen}>
-          <LazyStaking
-            t={t}
-            lang={lang}
-            layout={isDesktop ? "desktop" : "mobile"}
-            coins={coins}
-            ownedCars={ownedCars}
-            sellValueOf={sellValueOf}
-            defi={playerState.defi}
-            onAddLiquidity={addLiquidity}
-            onCreatePool={createPool}
-            onStake={stake}
-            onClaim={claimPosition}
-            onWithdraw={withdrawPosition}
-            onBorrow={borrow}
-            onRepay={repayLoan}
-            onClose={closeStaking}
-            onSfx={(n) => sfx(n)}
-          />
-        </LazyGate>
+        <LazyPanel
+          id="staking"
+          load={panels.staking}
+          label={t.staking}
+          props={{
+            t,
+            lang,
+            layout: isDesktop ? "desktop" : "mobile",
+            coins,
+            ownedCars,
+            sellValueOf,
+            defi: playerState.defi,
+            onAddLiquidity: addLiquidity,
+            onCreatePool: createPool,
+            onStake: stake,
+            onClaim: claimPosition,
+            onWithdraw: withdrawPosition,
+            onBorrow: borrow,
+            onRepay: repayLoan,
+            onClose: closeStaking,
+            onSfx: (n) => sfx(n),
+          }}
+        />
       )}
 
       {/* coin shop: packs + Solana checkout */}
       {coinShopOpen && (
-        <LazyGate resetKey={coinShopOpen}>
-          <LazyCoinShop
-            t={t}
-            coins={coins}
-            walletAddress={player && player.provider !== "Demo Wallet" ? player.walletAddress : undefined}
-            wide={isDesktop}
-            onPurchase={purchasePack}
-            onClose={closeCoinShop}
-          />
-        </LazyGate>
+        <LazyPanel
+          id="coinShop"
+          load={panels.coinShop}
+          label={t.coinShop}
+          props={{
+            t,
+            coins,
+            walletAddress: player && player.provider !== "Demo Wallet" ? player.walletAddress : undefined,
+            wide: isDesktop,
+            onPurchase: purchasePack,
+            onClose: closeCoinShop,
+          }}
+        />
       )}
 
       {/* purchase confirmation */}
@@ -1331,17 +1351,20 @@ function AppContent({
 
       {/* wallet modal */}
       {walletModalOpen && (
-        <LazyGate resetKey={walletModalOpen}>
-          <LazyWalletModal
-            t={t}
-            wallets={wallets}
-            connecting={connecting}
-            selectedWallet={selectedWallet}
-            onSelect={(w) => void handleConnectWallet(w)}
-            onDemoConnect={handleDemoWallet}
-            onClose={() => setWalletModalOpen(false)}
-          />
-        </LazyGate>
+        <LazyPanel
+          id="wallet"
+          load={panels.wallet}
+          label={t.selectWallet}
+          props={{
+            t,
+            wallets,
+            connecting,
+            selectedWallet,
+            onSelect: (w) => void handleConnectWallet(w),
+            onDemoConnect: handleDemoWallet,
+            onClose: () => setWalletModalOpen(false),
+          }}
+        />
       )}
 
       {/* overlays */}

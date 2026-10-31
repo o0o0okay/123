@@ -13,6 +13,7 @@ import { NewsPanel } from "./NewsPanel";
 import { StatPills, StatsRow } from "./Stats";
 import { BottomBar, type TabKey } from "./BottomBar";
 import { GameButton } from "./ui";
+import { prefetch } from "./lazy";
 
 export interface Player {
   name: string;
@@ -157,13 +158,24 @@ export function WelcomeScreen({
       </section>
 
       <section className="flex shrink-0 items-end justify-center gap-[10px] px-[22px] pb-[12px] pt-[12px]">
-        <GameButton variant="green" className="h-[66px] w-[104px]" onClick={onOpenDealer}>
+        <GameButton
+          variant="green"
+          className="h-[66px] w-[104px]"
+          onClick={onOpenDealer}
+          onPointerEnter={() => prefetch.dealership()}
+        >
           <span className="flex flex-col items-center gap-[2px] whitespace-nowrap font-display text-[12px] leading-none tracking-wide text-white t-stroke sw-3">
             <StoreIcon width={20} height={20} />
             {t.dealership}
           </span>
         </GameButton>
-        <GameButton variant="green" className="h-[66px] w-[96px]" onClick={onOpenStaking}>
+        <GameButton
+          variant="green"
+          className="h-[66px] w-[96px]"
+          id="mobile-staking-btn"
+          onClick={onOpenStaking}
+          onPointerEnter={() => prefetch.staking()}
+        >
           <span className="flex flex-col items-center gap-[2px] whitespace-nowrap font-display text-[12px] leading-none tracking-wide text-[#04120c]">
             <BoltIcon width={20} height={20} />
             {t.staking}

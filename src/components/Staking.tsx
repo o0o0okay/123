@@ -1083,7 +1083,7 @@ export function Staking({
 
   return (
     <div
-      className="absolute inset-0 z-40 flex animate-fade-in flex-col overflow-hidden bg-[#070a0c]"
+      className="fixed inset-0 z-[60] flex animate-fade-in flex-col overflow-hidden bg-[#070a0c]"
       role="dialog"
       aria-label={t.staking}
     >

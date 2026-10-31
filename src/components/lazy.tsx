@@ -36,6 +36,7 @@ export function loadPanel<T>(load: Loader<T>): Promise<T> {
 export const panels = {
   coinShop: () => import("./CoinShop").then((m) => m.CoinShop),
   dealership: () => import("./Dealership").then((m) => m.Dealership),
+  nft: () => import("./NftMarket").then((m) => m.NftMarket),
   raceOverlay: () => import("./RaceOverlay").then((m) => m.RaceOverlay),
   staking: () => import("./Staking").then((m) => m.Staking),
   wallet: () => import("./WalletModal").then((m) => m.WalletModal),
@@ -45,6 +46,7 @@ export const panels = {
 export const prefetch = {
   coinShop: () => void loadPanel(panels.coinShop).catch(() => {}),
   dealership: () => void loadPanel(panels.dealership).catch(() => {}),
+  nft: () => void loadPanel(panels.nft).catch(() => {}),
   staking: () => void loadPanel(panels.staking).catch(() => {}),
   raceOverlay: () => void loadPanel(panels.raceOverlay).catch(() => {}),
   wallet: () => void loadPanel(panels.wallet).catch(() => {}),
@@ -142,6 +144,7 @@ export function preloadPanels() {
   const warm = () => {
     prefetch.coinShop();
     prefetch.dealership();
+    prefetch.nft();
     prefetch.raceOverlay();
     prefetch.staking();
     prefetch.wallet();

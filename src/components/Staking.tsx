@@ -43,6 +43,7 @@ import {
   UndoIcon,
 } from "@/icons";
 import { PaintedImg } from "./PaintContext";
+import { NFT_RARITY_COLOR, nftCar, nftDayYield, nftStakeEarned, type NftItem, type NftStake } from "@/data/nft";
 
 /* ------------------------------------------------------------------ */
 /* props                                                               */
@@ -63,11 +64,22 @@ export interface StakingProps {
   onWithdraw: (positionId: string) => boolean;
   onBorrow: (amount: number, collateral: string[]) => boolean;
   onRepay: (loanId: string) => boolean;
+  /** car tokens the player owns (already resolved from ids) */
+  nfts: NftItem[];
+  /** tokens currently locked in the vault */
+  nftStakes: NftStake[];
+  onStakeNft: (nftId: string) => boolean;
+  onClaimNft: (stakeId: string) => boolean;
+  onUnstakeNft: (stakeId: string) => boolean;
+  /** opens the NFT marketplace from the vault tab */
+  onOpenNft: () => void;
+  /** board shown on open (the market jumps straight to the vault) */
+  initialTab?: Tab;
   onClose: () => void;
   onSfx?: (name: "click" | "toggle" | "swoosh") => void;
 }
 
-type Tab = "pools" | "stake" | "loans";
+type Tab = "pools" | "stake" | "nft" | "loans";
 
 /* ------------------------------------------------------------------ */
 /* small pieces                                                        */
@@ -700,11 +712,18 @@ export function Staking({
   onWithdraw,
   onBorrow,
   onRepay,
+  nfts,
+  nftStakes,
+  onStakeNft,
+  onClaimNft,
+  onUnstakeNft,
+  onOpenNft,
+  initialTab = "pools",
   onClose,
   onSfx,
 }: StakingProps) {
   const desk = layout === "desktop";
-  const [tab, setTab] = useState<Tab>("pools");
+  const [tab, setTab] = useState<Tab>(initialTab);
   const [now, setNow] = useState(() => Date.now());
   const [openPool, setOpenPool] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
@@ -834,6 +853,7 @@ export function Staking({
   const tabs: [Tab, string][] = [
     ["pools", t.tabPools],
     ["stake", t.tabStake],
+    ["nft", t.tabNft],
     ["loans", t.tabLoans],
   ];
 
@@ -1124,6 +1144,168 @@ export function Staking({
     </div>
   );
 
+  /* ------------------------------- nft vault ------------------------------ */
+
+  const stakeOf = new Map(nftStakes.map((s) => [s.nftId, s]));
+  const itemOf = new Map(nfts.map((n) => [n.id, n]));
+  const dailyYield = nfts.filter((n) => stakeOf.has(n.id)).reduce((sum, n) => sum + nftDayYield(n), 0);
+  const nftEarned = nftStakes.reduce((sum, s) => sum + nftStakeEarned(s, itemOf.get(s.nftId), liveNow), 0);
+  /** staked tokens first, then the rest of the wallet */
+  const vaultList = [...nfts].sort((a, b) => {
+    const sa = stakeOf.get(a.id)?.startedAt ?? -1;
+    const sb = stakeOf.get(b.id)?.startedAt ?? -1;
+    return sb - sa;
+  });
+
+  const nftBody = (
+    <div className="space-y-[10px]">
+      <div
+        data-nft-vault-panel=""
+        className="rounded-[20px] border-[2px] border-[#6b46ff]/60 bg-gradient-to-b from-[#241b45] to-[#120e22] px-[13px] py-[12px]"
+      >
+        <div className="flex items-center gap-[9px]">
+          <span className="flex h-[34px] w-[34px] shrink-0 items-center justify-center rounded-[10px] bg-gradient-to-br from-[#9a7cff] to-[#5b2bd6] font-display text-[17px] text-white shadow-[0_3px_0_#2b1466]">
+            N
+          </span>
+          <div className="min-w-0">
+            <div className="font-display text-[17px] leading-none text-white">{t.nftVault}</div>
+            <div className="mt-[3px] font-body text-[9px] font-black leading-snug tracking-wide text-white/45">{t.nftVaultDesc}</div>
+          </div>
+          <div className="ms-auto shrink-0 text-end">
+            <div className="font-body text-[8px] font-black uppercase tracking-[0.12em] text-white/35">{t.nftDailyYield}</div>
+            <div className="flex items-center justify-end gap-[4px] font-display text-[18px] leading-none text-[#c9a8ff]" dir="ltr">
+              <Coin size={12} />
+              {dailyYield.toLocaleString("en-US")}
+            </div>
+          </div>
+        </div>
+
+        <div className="mt-[10px] grid grid-cols-3 gap-[6px]">
+          <Stat label={t.nftStakedCount} tone="default">
+            {nftStakes.length}
+          </Stat>
+          <Stat label={t.nftDailyYield} align="end" tone="green">
+            <span className="flex items-center justify-end gap-[3px]">
+              <Coin size={10} />
+              {dailyYield}
+            </span>
+          </Stat>
+          <Stat label={t.yourEarnings} align="end" tone="green">
+            {fmtYield(nftEarned)}
+          </Stat>
+        </div>
+
+        <div className="mt-[9px] flex items-center gap-[7px]">
+          <ActionButton kind="ghost" className="flex-1" onClick={onOpenNft} data-nft-market-btn="">
+            <PlusIcon width={12} height={12} />
+            {t.nftGetNfts}
+          </ActionButton>
+        </div>
+      </div>
+
+      <div className="font-body text-[10px] font-black uppercase tracking-[0.12em] text-white/35">{t.yourNfts}</div>
+      {vaultList.length === 0 ? (
+        <div data-nft-vault-empty="" className="rounded-[16px] border-[2px] border-dashed border-[#232a31] px-[14px] py-[18px] text-center">
+          <div className="font-display text-[14px] text-white/60">{t.nftNoNfts}</div>
+          <div className="mt-[3px] font-body text-[9px] font-black text-white/30">{t.nftNoNftsHint}</div>
+        </div>
+      ) : (
+        <div data-nft-vault-list="" className="space-y-[7px]">
+          {vaultList.map((n) => {
+            const stake = stakeOf.get(n.id);
+            const car = nftCar(n);
+            const earned = stake ? nftStakeEarned(stake, n, liveNow) : 0;
+            return (
+              <div
+                key={n.id}
+                data-nft-vault-item={n.id}
+                data-staked={stake ? "1" : undefined}
+                className={cn(
+                  "rounded-[16px] border-[2px] bg-[#14181c] px-[11px] py-[9px]",
+                  stake ? "border-[#6b46ff]/70" : "border-[#232a31]",
+                )}
+              >
+                <div className="flex items-center gap-[8px]">
+                  <div
+                    className="relative h-[36px] w-[36px] shrink-0 overflow-hidden rounded-[9px]"
+                    style={{ backgroundImage: `linear-gradient(150deg, ${n.palette[0]}, ${n.palette[1]})` }}
+                  >
+                    {car && (
+                      <PaintedImg
+                        carId={n.carId}
+                        src={car.image}
+                        alt=""
+                        draggable={false}
+                        className="absolute inset-0 h-full w-full object-contain"
+                        style={{ padding: "4%" }}
+                      />
+                    )}
+                  </div>
+                  <div className="min-w-0 flex-1">
+                    <div className="truncate font-display text-[13px] leading-none text-white">{n.name}</div>
+                    <div className="mt-[3px] flex items-center gap-[5px] font-body text-[9px] font-black tracking-wide">
+                      <span style={{ color: NFT_RARITY_COLOR[n.rarity] }}>{n.rarity}</span>
+                      <span className="text-white/20">·</span>
+                      <span className="text-white/40" dir="ltr">
+                        +{nftDayYield(n).toLocaleString("en-US")} / {t.dayShort.replace("{n}", "1")}
+                      </span>
+                    </div>
+                  </div>
+                  {stake ? (
+                    <Stat label={t.yourEarnings} align="end" tone="green">
+                      {fmtYield(earned)}
+                    </Stat>
+                  ) : (
+                    <ActionButton
+                      kind="primary"
+                      onClick={() => {
+                        if (onStakeNft(n.id)) setError(null);
+                      }}
+                      data-nft-stake={n.id}
+                    >
+                      <LockIcon width={11} height={11} />
+                      {t.nftStakeAction}
+                    </ActionButton>
+                  )}
+                </div>
+
+                {stake && (
+                  <div className="mt-[8px] flex items-center justify-between gap-[8px]">
+                    <span className="truncate font-body text-[9px] font-black tracking-wide text-white/35">
+                      {t.nftInVault}
+                    </span>
+                    <div className="flex gap-[5px]">
+                      <ActionButton
+                        kind="primary"
+                        onClick={() => {
+                          if (onClaimNft(stake.id)) setError(null);
+                        }}
+                        data-nft-claim={stake.id}
+                      >
+                        <Coin size={11} />
+                        {t.claim}
+                      </ActionButton>
+                      <ActionButton
+                        kind="plain"
+                        onClick={() => {
+                          if (onUnstakeNft(stake.id)) setError(null);
+                        }}
+                        data-nft-unstake={stake.id}
+                      >
+                        <UndoIcon width={11} height={11} />
+                        {t.nftUnstake}
+                      </ActionButton>
+                    </div>
+                  </div>
+                )}
+              </div>
+            );
+          })}
+        </div>
+      )}
+    </div>
+  );
+
   return (
     <div
       className="fixed inset-0 z-[60] flex animate-fade-in flex-col overflow-hidden bg-[#070a0c]"
@@ -1190,6 +1372,7 @@ export function Staking({
 
           {tab === "pools" && poolsBody}
           {tab === "stake" && stakeBody}
+          {tab === "nft" && nftBody}
           {tab === "loans" && loansBody}
         </div>
       </div>

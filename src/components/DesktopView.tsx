@@ -22,6 +22,7 @@ import {
   SolanaIcon,
   SolflareIcon,
   SpeakerIcon,
+  StarBurstIcon,
   StoreIcon,
   UndoIcon,
   WalletIcon,
@@ -65,6 +66,8 @@ export interface DesktopViewProps {
   onNext: () => void;
   onOpenDealer: () => void;
   onOpenStaking: () => void;
+  /** opens the NFT marketplace */
+  onOpenNft: () => void;
   /** opens the coin shop (buy coins with SOL) */
   onOpenCoinShop: () => void;
   onEquip: (car: Car) => void;
@@ -184,6 +187,19 @@ function TopBar(p: DesktopViewProps) {
         >
           <BoltIcon width={18} height={18} />
           {t.staking}
+        </button>
+        {/* NFT market (car tokens) */}
+        <button
+          type="button"
+          id="desktop-nft-btn"
+          onClick={p.onOpenNft}
+          onPointerEnter={() => prefetch.nft()}
+          onFocus={() => prefetch.nft()}
+          title={t.nftSub}
+          className="flex h-[44px] items-center gap-[7px] rounded-full border-[3px] border-ink bg-gradient-to-b from-[#b48dff] to-[#6b46ff] px-[14px] font-display text-[15px] tracking-wide text-white shadow-[0_4px_0_#3b1f8f] transition-all hover:-translate-y-[1px] hover:brightness-110 active:translate-y-[2px] active:shadow-none"
+        >
+          <StarBurstIcon width={18} height={18} />
+          {t.nft}
         </button>
 
         {/* Top Shop / Coins Button with pulsating highlight & coin fly target */}

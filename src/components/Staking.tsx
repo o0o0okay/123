@@ -476,7 +476,7 @@ function CollateralPicker({
   onToggle: (id: string) => void;
   desk: boolean;
 }) {
-  if (!cars.length) return <div className="font-body text-[10px] font-black text-white/35">{t.noPositions}</div>;
+  if (!cars.length) return <div className="font-body text-[10px] font-black text-white/35">{t.noCars}</div>;
   return (
     <div className={cn("grid gap-[6px]", desk ? "grid-cols-2" : "grid-cols-1")}>
       {cars.map((car) => {
@@ -615,6 +615,76 @@ function LoanCard({
 /* panel                                                               */
 /* ------------------------------------------------------------------ */
 
+/** newest first: a top-up bumps the row, and the array order breaks ties */
+function newestFirst(list: StakePosition[]) {
+  return list
+    .map((p, i) => ({ p, i }))
+    .sort((a, b) => (b.p.updatedAt ?? b.p.startedAt) - (a.p.updatedAt ?? a.p.startedAt) || b.i - a.i)
+    .map((x) => x.p);
+}
+
+function EmptyPositions({ title, hint }: { title: string; hint: string }) {
+  return (
+    <div data-empty-positions="" className="rounded-[16px] border-[2px] border-dashed border-[#232a31] px-[14px] py-[18px] text-center">
+      <div className="font-display text-[14px] text-white/60">{title}</div>
+      <div className="mt-[3px] font-body text-[9px] font-black text-white/30">{hint}</div>
+    </div>
+  );
+}
+
+function PositionCard({
+  t,
+  position,
+  pool,
+  now,
+  onClaim,
+  onWithdraw,
+}: {
+  t: Strings;
+  position: StakePosition;
+  pool?: PoolInfo;
+  now: number;
+  onClaim: (id: string) => void;
+  onWithdraw: (id: string) => void;
+}) {
+  const left = lockLeft(position.unlockAt, now);
+  return (
+    <div data-position={position.id} data-kind={position.kind} className="rounded-[16px] border-[2px] border-[#232a31] bg-[#14181c] px-[11px] py-[9px]">
+      <div className="flex items-center gap-[8px]">
+        <PairBadge a={pool?.a ?? "hct"} b={pool?.b ?? "sol"} size={20} />
+        <div className="min-w-0 flex-1">
+          <div className="truncate font-display text-[13px] leading-none text-white">{position.name}</div>
+          <div className="mt-[3px] font-body text-[9px] font-black tracking-wide text-white/35" dir="ltr">
+            {position.apr ? pct(position.apr) : ""} ·{" "}
+            {left.locked ? `${t.unlocksIn} ${left.days}d ${left.hours}h` : t.unlocked}
+          </div>
+        </div>
+        <Stat label={t.yourDeposit} align="end">
+          <span className="flex items-center justify-end gap-[3px]">
+            <Coin size={11} />
+            {position.amount.toLocaleString("en-US")}
+          </span>
+        </Stat>
+      </div>
+      <div className="mt-[8px] flex items-center justify-between gap-[8px]">
+        <Stat label={t.yourEarnings} tone="green">
+          {fmtYield(earnedOf(position, now))}
+        </Stat>
+        <div className="flex gap-[5px]">
+          <ActionButton kind="primary" onClick={() => onClaim(position.id)} data-claim={position.id}>
+            <Coin size={11} />
+            {t.claim}
+          </ActionButton>
+          <ActionButton kind="plain" disabled={left.locked} onClick={() => onWithdraw(position.id)} data-withdraw={position.id}>
+            {left.locked ? <LockIcon width={11} height={11} /> : <UndoIcon width={11} height={11} />}
+            {t.withdraw}
+          </ActionButton>
+        </div>
+      </div>
+    </div>
+  );
+}
+
 export function Staking({
   t,
   lang,
@@ -668,6 +738,10 @@ export function Staking({
   const pools = useMemo(() => allPools(defi), [defi]);
   const positions = defi.positions ?? [];
   const loans = defi.loans ?? [];
+  /** what was opened in the STAKE tab, newest first */
+  const stakes = newestFirst(positions.filter((p) => p.kind === "single"));
+  /** what was opened in the POOLS tab, newest first */
+  const poolPositions = newestFirst(positions.filter((p) => p.kind === "lp"));
 
   const staked = positions.reduce((s, p) => s + p.amount, 0);
   const earnings = positions.reduce((s, p) => s + earnedOf(p, liveNow), 0);
@@ -851,6 +925,18 @@ export function Staking({
           desk={desk}
         />
       ))}
+
+      {/* everything opened from this tab, newest first */}
+      <div className="pt-[4px] font-body text-[10px] font-black uppercase tracking-[0.12em] text-white/35">{t.yourPools}</div>
+      {poolPositions.length === 0 ? (
+        <EmptyPositions title={t.noPools} hint={t.noPoolsHint} />
+      ) : (
+        <div data-positions="lp" className="space-y-[7px]">
+          {poolPositions.map((p) => (
+            <PositionCard key={p.id} t={t} position={p} pool={pools.find((x) => x.id === p.poolId)} now={liveNow} onClaim={claim} onWithdraw={onWithdraw} />
+          ))}
+        </div>
+      )}
     </div>
   );
 
@@ -918,58 +1004,15 @@ export function Staking({
         </div>
       </div>
 
-      {/* positions */}
-      <div className="font-body text-[10px] font-black uppercase tracking-[0.12em] text-white/35">{t.positions}</div>
-      {positions.length === 0 ? (
-        <div className="rounded-[16px] border-[2px] border-dashed border-[#232a31] px-[14px] py-[18px] text-center">
-          <div className="font-display text-[14px] text-white/60">{t.noPositions}</div>
-          <div className="mt-[3px] font-body text-[9px] font-black text-white/30">{t.noPositionsHint}</div>
-        </div>
+      {/* everything opened from this tab, newest first */}
+      <div className="font-body text-[10px] font-black uppercase tracking-[0.12em] text-white/35">{t.yourStakes}</div>
+      {stakes.length === 0 ? (
+        <EmptyPositions title={t.noStakes} hint={t.noStakesHint} />
       ) : (
-        <div className="space-y-[7px]">
-          {positions.map((p) => {
-            const left = lockLeft(p.unlockAt, liveNow);
-            const pool = pools.find((x) => x.id === p.poolId);
-            return (
-              <div key={p.id} data-position={p.id} className="rounded-[16px] border-[2px] border-[#232a31] bg-[#14181c] px-[11px] py-[9px]">
-                <div className="flex items-center gap-[8px]">
-                  <PairBadge a={pool?.a ?? "hct"} b={pool?.b ?? "sol"} size={20} />
-                  <div className="min-w-0 flex-1">
-                    <div className="truncate font-display text-[13px] leading-none text-white">{p.name}</div>
-                    <div className="mt-[3px] font-body text-[9px] font-black tracking-wide text-white/35" dir="ltr">
-                      {p.apr ? pct(p.apr) : ""} · {left.locked ? `${t.unlocksIn} ${left.days}d ${left.hours}h` : t.unlocked}
-                    </div>
-                  </div>
-                  <Stat label={t.yourDeposit} align="end">
-                    <span className="flex items-center justify-end gap-[3px]">
-                      <Coin size={11} />
-                      {p.amount.toLocaleString("en-US")}
-                    </span>
-                  </Stat>
-                </div>
-                <div className="mt-[8px] flex items-center justify-between gap-[8px]">
-                  <Stat label={t.yourEarnings} tone="green">
-                    {fmtYield(earnedOf(p, liveNow))}
-                  </Stat>
-                  <div className="flex gap-[5px]">
-                    <ActionButton kind="primary" onClick={() => claim(p.id)} data-claim={p.id}>
-                      <Coin size={11} />
-                      {t.claim}
-                    </ActionButton>
-                    <ActionButton
-                      kind="plain"
-                      disabled={left.locked}
-                      onClick={() => onWithdraw(p.id)}
-                      data-withdraw={p.id}
-                    >
-                      {left.locked ? <LockIcon width={11} height={11} /> : <UndoIcon width={11} height={11} />}
-                      {t.withdraw}
-                    </ActionButton>
-                  </div>
-                </div>
-              </div>
-            );
-          })}
+        <div data-positions="single" className="space-y-[7px]">
+          {stakes.map((p) => (
+            <PositionCard key={p.id} t={t} position={p} pool={pools.find((x) => x.id === p.poolId)} now={liveNow} onClaim={claim} onWithdraw={onWithdraw} />
+          ))}
         </div>
       )}
     </div>
@@ -1243,12 +1286,12 @@ export function Staking({
         </Sheet>
       )}
 
-      {/* quick claim-all for pools */}
-      {tab === "pools" && positions.some((p) => earnedOf(p, liveNow) >= 1) && (
+      {/* quick claim-all for the pool deposits listed in this tab */}
+      {tab === "pools" && poolPositions.some((p) => earnedOf(p, liveNow) >= 1) && (
         <button
           type="button"
           onClick={() => {
-            positions.filter((p) => earnedOf(p, liveNow) >= 1).forEach((p) => onClaim(p.id));
+            poolPositions.filter((p) => earnedOf(p, liveNow) >= 1).forEach((p) => onClaim(p.id));
           }}
           data-claim-all=""
           className="absolute bottom-[14px] end-[16px] flex items-center gap-[6px] rounded-full bg-gradient-to-b from-[#4bf5a0] to-[#16a86a] px-[16px] py-[8px] font-display text-[13px] text-[#04120c] shadow-[0_4px_0_#0b6a44]"

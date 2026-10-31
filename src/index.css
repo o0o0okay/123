@@ -238,3 +238,68 @@ input:-webkit-autofill:focus {
 .thin-scroll::-webkit-scrollbar { width: 6px; }
 .thin-scroll::-webkit-scrollbar-track { background: transparent; }
 .thin-scroll::-webkit-scrollbar-thumb { background: rgba(111, 193, 255, 0.55); border-radius: 999px; }
+
+/* ------------------------------------------------------------------ */
+/* Price range: one rail, two thumbs (dealership filters)              */
+/* ------------------------------------------------------------------ */
+/* Two <input type="range"> share the same rail, one for MIN and one   */
+/* for MAX. The inputs ignore the pointer so the rail never swallows   */
+/* the click meant for the other thumb; only the thumbs are grab-able. */
+.price-range {
+  position: relative;
+  height: 26px;
+  touch-action: none;
+}
+.price-range input[type="range"] {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 26px;
+  margin: 0;
+  padding: 0;
+  appearance: none;
+  -webkit-appearance: none;
+  background: transparent;
+  pointer-events: none;
+}
+.price-range input[type="range"]:focus-visible {
+  outline: none;
+}
+.price-range input[type="range"]::-webkit-slider-runnable-track {
+  height: 26px;
+  background: transparent;
+}
+.price-range input[type="range"]::-moz-range-track {
+  height: 26px;
+  background: transparent;
+}
+.price-range input[type="range"]::-webkit-slider-thumb {
+  -webkit-appearance: none;
+  appearance: none;
+  pointer-events: auto;
+  width: 20px;
+  height: 20px;
+  margin-top: 3px; /* (26 - 20) / 2, keeps the thumb on the rail */
+  border: 3px solid var(--color-ink);
+  border-radius: 999px;
+  background: linear-gradient(180deg, #ffe37a 0%, #ffb01f 100%);
+  box-shadow: 0 2px 0 #9a4a08;
+  cursor: grab;
+}
+.price-range input[type="range"]::-moz-range-thumb {
+  pointer-events: auto;
+  width: 20px;
+  height: 20px;
+  border: 3px solid var(--color-ink);
+  border-radius: 999px;
+  background: linear-gradient(180deg, #ffe37a 0%, #ffb01f 100%);
+  box-shadow: 0 2px 0 #9a4a08;
+  cursor: grab;
+}
+.price-range input[type="range"]:active::-webkit-slider-thumb { cursor: grabbing; }
+.price-range input[type="range"]:focus-visible::-webkit-slider-thumb {
+  box-shadow: 0 0 0 3px rgba(111, 193, 255, 0.75), 0 2px 0 #9a4a08;
+}
+.price-range input[type="range"]:focus-visible::-moz-range-thumb {
+  box-shadow: 0 0 0 3px rgba(111, 193, 255, 0.75), 0 2px 0 #9a4a08;
+}

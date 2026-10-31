@@ -106,14 +106,132 @@ interface FilterPanelProps {
   setBrand: (b: BrandId | "all") => void;
   drives: Drive[];
   toggleDrive: (d: Drive) => void;
+  minPrice: number;
+  setMinPrice: (n: number) => void;
   maxPrice: number;
   setMaxPrice: (n: number) => void;
+  /** highest price in the showroom, the top of the range */
   priceCap: number;
   affordable: boolean;
   setAffordable: (v: boolean) => void;
   brandCounts: Record<string, number>;
   onReset: () => void;
   children?: ReactNode;
+}
+
+/** One end of the price range: a coin-prefixed field that accepts a typed number. */
+function PriceField({
+  id,
+  label,
+  value,
+  cap,
+  onCommit,
+}: {
+  id: "min" | "max";
+  label: string;
+  value: number;
+  cap: number;
+  onCommit: (n: number) => void;
+}) {
+  // while typing we keep the raw digits, so a thousand separator never moves the caret;
+  // the moment the real value changes from elsewhere (the slider, a reset) we drop the draft
+  const [draft, setDraft] = useState<string | null>(null);
+  const shown =
+    draft === null
+      ? value.toLocaleString("en-US")
+      : draft === ""
+        ? ""
+        : Number(draft) === value
+          ? draft
+          : value.toLocaleString("en-US");
+
+  return (
+    <label className="flex min-w-0 flex-1 flex-col gap-[2px]">
+      <span className="truncate font-body text-[9px] font-black tracking-wider text-white/45">{label}</span>
+      <span className="flex h-[28px] items-center gap-[4px] rounded-[9px] border-[2.5px] border-ink bg-navy-950/85 px-[6px] shadow-[inset_0_2px_0_rgba(0,0,0,0.4)] transition-colors focus-within:border-skyg-400">
+        <CoinIcon width={12} height={12} className="shrink-0 text-amber-400" />
+        <input
+          type="text"
+          inputMode="numeric"
+          autoComplete="off"
+          dir="ltr"
+          data-price={id}
+          aria-label={label}
+          value={shown}
+          onChange={(e) => {
+            const digits = e.target.value
+              .replace(/[^\d]/g, "")
+              .replace(/^0+(?=\d)/, "")
+              .slice(0, 9);
+            setDraft(digits);
+            if (digits) onCommit(Math.min(cap, Number(digits)));
+          }}
+          onBlur={() => setDraft(null)}
+          onKeyDown={(e) => {
+            if (e.key !== "Enter") return;
+            e.currentTarget.blur();
+          }}
+          className="min-w-0 flex-1 bg-transparent font-display text-[13px] leading-none tabular-nums text-amber-400 outline-none"
+        />
+      </span>
+    </label>
+  );
+}
+
+/** The rail under the two fields: both ends are draggable. */
+function PriceRange({
+  min,
+  max,
+  cap,
+  minLabel,
+  maxLabel,
+  onMin,
+  onMax,
+}: {
+  min: number;
+  max: number;
+  cap: number;
+  minLabel: string;
+  maxLabel: string;
+  onMin: (n: number) => void;
+  onMax: (n: number) => void;
+}) {
+  const pct = (n: number) => (cap > 0 ? Math.min(100, Math.max(0, (n / cap) * 100)) : 0);
+  const lo = pct(min);
+  const hi = pct(max);
+  return (
+    <div className="price-range mt-[8px]" dir="ltr">
+      {/* the rail and the selected slice */}
+      <div className="pointer-events-none absolute inset-x-0 top-1/2 h-[6px] -translate-y-1/2 rounded-full border-[2px] border-ink bg-navy-950" />
+      <div
+        className="pointer-events-none absolute top-1/2 h-[6px] -translate-y-1/2 rounded-full bg-gradient-to-r from-[#ffd23a] to-[#ff9a1f]"
+        style={{ left: `${lo}%`, right: `${100 - hi}%` }}
+      />
+      <input
+        type="range"
+        min={0}
+        max={cap}
+        step={1000}
+        value={min}
+        onChange={(e) => onMin(Number(e.target.value))}
+        aria-label={minLabel}
+        data-range="min"
+        // when both thumbs are stacked the min one must stay grabbable
+        style={{ zIndex: lo > 50 ? 5 : 3 }}
+      />
+      <input
+        type="range"
+        min={0}
+        max={cap}
+        step={1000}
+        value={max}
+        onChange={(e) => onMax(Number(e.target.value))}
+        aria-label={maxLabel}
+        data-range="max"
+        style={{ zIndex: 4 }}
+      />
+    </div>
+  );
 }
 
 function FilterPanel(p: FilterPanelProps) {
@@ -183,25 +301,41 @@ function FilterPanel(p: FilterPanelProps) {
         </div>
       </div>
 
-      {/* price + toggles (buy mode only) */}
+      {/* price range + toggles (buy mode only) */}
       {p.mode === "buy" && (
         <div>
-          <SectionTitle>{t.maxPrice}</SectionTitle>
-          <div className="flex items-center gap-[5px] font-display text-[15px] leading-none text-amber-400" dir="ltr">
-            <CoinIcon width={15} height={15} />
-            {p.maxPrice.toLocaleString("en-US")}
+          <SectionTitle>{t.priceRange}</SectionTitle>
+
+          {/* two ends of the range, editable by typing a round number */}
+          <div className="flex items-end gap-[6px]">
+            <PriceField
+              id="min"
+              label={t.minPrice}
+              value={p.minPrice}
+              cap={p.priceCap}
+              onCommit={p.setMinPrice}
+            />
+            <span className="mb-[7px] h-[2px] w-[8px] shrink-0 rounded-full bg-white/30" />
+            <PriceField
+              id="max"
+              label={t.maxPrice}
+              value={p.maxPrice}
+              cap={p.priceCap}
+              onCommit={p.setMaxPrice}
+            />
           </div>
-          <input
-            type="range"
-            min={0}
-            max={p.priceCap}
-            step={5000}
-            value={p.maxPrice}
-            onChange={(e) => p.setMaxPrice(Number(e.target.value))}
-            aria-label={t.maxPrice}
-            dir="ltr"
-            className="mt-[6px] w-full cursor-pointer accent-[#ffd23a]"
+
+          <PriceRange
+            min={p.minPrice}
+            max={p.maxPrice}
+            cap={p.priceCap}
+            minLabel={t.minPrice}
+            maxLabel={t.maxPrice}
+            onMin={p.setMinPrice}
+            onMax={p.setMaxPrice}
           />
+
+          <p className="mt-[2px] font-body text-[8px] font-black tracking-wide text-white/35">{t.priceRangeHint}</p>
         </div>
       )}
       {p.mode === "buy" && (
@@ -270,7 +404,8 @@ export function Dealership({
   const [sort, setSort] = useState<SortKey>("pp-asc");
   const [brand, setBrand] = useState<BrandId | "all">("all");
   const [drives, setDrives] = useState<Drive[]>([]);
-  const [maxPrice, setMaxPrice] = useState(priceCap);
+  const [minPrice, setMinPriceRaw] = useState(0);
+  const [maxPrice, setMaxPriceRaw] = useState(priceCap);
   const [affordable, setAffordable] = useState(false);
   const [selectedId, setSelectedId] = useState(activeId);
   const [drawer, setDrawer] = useState(false);
@@ -281,6 +416,20 @@ export function Dealership({
   const [detailsOpen, setDetailsOpen] = useState(false);
   /** the scrolling card container — used to move the selection with the arrow keys */
   const gridRef = useRef<HTMLDivElement | null>(null);
+
+  /** keep a price inside the showroom range */
+  const clampPrice = (n: number) => Math.max(0, Math.min(priceCap, Math.round(n || 0)));
+  /** moving one end of the range pushes the other one along instead of crossing it */
+  const setMinPrice = (n: number) => {
+    const v = clampPrice(n);
+    setMinPriceRaw(v);
+    setMaxPriceRaw((m) => Math.max(m, v));
+  };
+  const setMaxPrice = (n: number) => {
+    const v = clampPrice(n);
+    setMaxPriceRaw(v);
+    setMinPriceRaw((m) => Math.min(m, v));
+  };
 
   const animatedCoins = useAnimatedNumber(coins);
   const { isPulsing } = useCoinFly();
@@ -325,7 +474,7 @@ export function Dealership({
       if (brand !== "all" && c.brand !== brand) return false;
       if (drives.length && !drives.includes(c.drive)) return false;
       if (mode === "buy") {
-        if (c.price > maxPrice) return false;
+        if (c.price < minPrice || c.price > maxPrice) return false;
         if (affordable && c.price > coins) return false;
       }
       if (q) {
@@ -348,7 +497,7 @@ export function Dealership({
       "year-desc": (a, b) => b.year - a.year,
     };
     return out.sort((a, b) => cmp[sort](a, b) || a.price - b.price);
-  }, [cars, owned, mode, brand, drives, maxPrice, affordable, coins, query, sort, sellValueOf]);
+  }, [cars, owned, mode, brand, drives, minPrice, maxPrice, affordable, coins, query, sort, sellValueOf]);
 
   const selected = list.find((c) => c.id === selectedId) ?? list[0] ?? null;
   const activeCar = cars.find((c) => c.id === activeId);
@@ -370,7 +519,7 @@ export function Dealership({
   const activeFilters =
     (brand !== "all" ? 1 : 0) +
     drives.length +
-    (mode === "buy" && maxPrice < priceCap ? 1 : 0) +
+    (mode === "buy" && (minPrice > 0 || maxPrice < priceCap) ? 1 : 0) +
     (mode === "buy" && affordable ? 1 : 0);
 
   const crumbs = [t.dealership, ...(brand === "all" ? [t.allBrands] : [BRANDS[brand].country[lang], BRANDS[brand].name])];
@@ -381,7 +530,8 @@ export function Dealership({
     setQuery("");
     setBrand("all");
     setDrives([]);
-    setMaxPrice(priceCap);
+    setMinPriceRaw(0);
+    setMaxPriceRaw(priceCap);
     setAffordable(false);
     setSort("pp-asc");
   };
@@ -558,6 +708,8 @@ export function Dealership({
     },
     drives,
     toggleDrive,
+    minPrice,
+    setMinPrice,
     maxPrice,
     setMaxPrice,
     priceCap,

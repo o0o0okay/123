@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState } from "react";
+import { createPortal } from "react-dom";
 import { cn } from "@/utils/cn";
 import type { NewsItem } from "@/i18n";
 import { CloseIcon, MegaphoneIcon } from "@/icons";
@@ -30,9 +31,20 @@ export function NewsPanel({
   moreLabel?: string;
 }) {
   const [open, setOpen] = useState<NewsItem | null>(null);
+  /**
+   * The panel blurs its own backdrop, which makes it the containing block for
+   * `position: fixed` — a dialog rendered in-place would be boxed inside the
+   * panel instead of the play area. Portal it to the scaled game stage so it
+   * lands dead-centre on screen at the same scale as the rest of the UI.
+   */
+  const [host, setHost] = useState<HTMLElement | null>(null);
   const listRef = useRef<HTMLDivElement | null>(null);
   /** how far the list still has to go, so the edge can hint at more news */
   const [more, setMore] = useState(false);
+
+  useEffect(() => {
+    setHost((document.querySelector("[data-game-stage]") as HTMLElement | null) ?? document.body);
+  }, []);
 
   // a shorter list (or a resized frame) must not keep a stale "there is more" hint
   useEffect(() => {
@@ -119,65 +131,67 @@ export function NewsPanel({
         </div>
       </div>
 
-      {open && (
-        <div
-          // `fixed` inside the scaled game canvas covers the whole play area,
-          // so the story is never clipped by the panel it came from
-          className="fixed inset-0 z-[70] flex animate-fade-in items-center justify-center bg-navy-950/80 px-[20px] backdrop-blur-[3px]"
-          role="dialog"
-          aria-modal="true"
-          aria-label={open.title}
-          data-news-dialog={open.title}
-          onClick={() => setOpen(null)}
-        >
+      {open && host &&
+        createPortal(
           <div
-            className="relative w-full max-w-[420px] animate-slide-up rounded-[24px] border-[4px] border-ink bg-gradient-to-b from-navy-700 to-navy-900 p-[16px] pb-[14px] shadow-[0_12px_0_#060a28,0_30px_60px_rgba(0,0,0,0.55)]"
-            onClick={(e) => e.stopPropagation()}
+            // portaled into the scaled stage, so `fixed` covers the whole play
+            // area and the card is truly centred
+            className="fixed inset-0 z-[70] flex animate-fade-in items-center justify-center bg-navy-950/80 px-[22px] py-[22px] backdrop-blur-[3px]"
+            role="dialog"
+            aria-modal="true"
+            aria-label={open.title}
+            data-news-dialog={open.title}
+            onClick={() => setOpen(null)}
           >
-            <button
-              type="button"
-              data-news-close=""
-              onClick={() => setOpen(null)}
-              aria-label={closeLabel}
-              className="absolute -right-[12px] -top-[12px] flex h-[38px] w-[38px] items-center justify-center rounded-full border-[3px] border-ink bg-gradient-to-b from-[#ff6b4a] to-[#e8381c] text-white shadow-[0_3px_0_#7a1a0c] transition-transform active:translate-y-[2px]"
-            >
-              <CloseIcon width={19} height={19} />
-            </button>
-
-            <div className="flex items-center justify-between gap-2 pe-[26px]">
-              <span
-                className={cn(
-                  "rounded-full border-[2px] border-ink px-[10px] py-[1px] font-body text-[11px] font-black tracking-wider text-ink",
-                  TAG_COLORS[Math.max(0, items.findIndex((x) => x.title === open.title)) % TAG_COLORS.length],
-                )}
-              >
-                {open.tag}
-              </span>
-              <span className="font-body text-[11px] font-bold text-white/45">{open.date}</span>
-            </div>
-
-            <h3 className="mt-[8px] font-display text-[22px] leading-tight tracking-wide text-amber-400 t-stroke sw-3">
-              {open.title}
-            </h3>
-
-            {/* long stories scroll inside the card instead of growing it */}
             <div
-              data-news-body=""
-              className="thin-scroll mt-[6px] max-h-[300px] overflow-y-auto overscroll-contain pe-[6px] font-body text-[13px] font-bold leading-relaxed text-white/85 [touch-action:pan-y]"
+              className="relative flex max-h-full w-full max-w-[420px] animate-slide-up flex-col rounded-[24px] border-[4px] border-ink bg-gradient-to-b from-navy-700 to-navy-900 p-[16px] pb-[14px] shadow-[0_12px_0_#060a28,0_30px_60px_rgba(0,0,0,0.55)]"
+              onClick={(e) => e.stopPropagation()}
             >
-              <p className="whitespace-pre-line">{open.body}</p>
-            </div>
+              <button
+                type="button"
+                data-news-close=""
+                onClick={() => setOpen(null)}
+                aria-label={closeLabel}
+                className="absolute -right-[12px] -top-[12px] flex h-[38px] w-[38px] items-center justify-center rounded-full border-[3px] border-ink bg-gradient-to-b from-[#ff6b4a] to-[#e8381c] text-white shadow-[0_3px_0_#7a1a0c] transition-transform active:translate-y-[2px]"
+              >
+                <CloseIcon width={19} height={19} />
+              </button>
 
-            <button
-              type="button"
-              onClick={() => setOpen(null)}
-              className="mt-[12px] w-full rounded-full border-[3px] border-ink bg-gradient-to-b from-[#6fb6ff] to-[#3d8ff5] py-[6px] font-display text-[16px] text-white shadow-[0_3px_0_#1b4a8a] transition-transform active:translate-y-[2px] active:shadow-none"
-            >
-              {closeLabel}
-            </button>
-          </div>
-        </div>
-      )}
+              <div className="flex shrink-0 items-center justify-between gap-2 pe-[26px]">
+                <span
+                  className={cn(
+                    "rounded-full border-[2px] border-ink px-[10px] py-[1px] font-body text-[11px] font-black tracking-wider text-ink",
+                    TAG_COLORS[Math.max(0, items.findIndex((x) => x.title === open.title)) % TAG_COLORS.length],
+                  )}
+                >
+                  {open.tag}
+                </span>
+                <span className="font-body text-[11px] font-bold text-white/45">{open.date}</span>
+              </div>
+
+              <h3 className="mt-[8px] shrink-0 font-display text-[22px] leading-tight tracking-wide text-amber-400 t-stroke sw-3">
+                {open.title}
+              </h3>
+
+              {/* long stories scroll inside the card; the card itself stays centred */}
+              <div
+                data-news-body=""
+                className="thin-scroll mt-[6px] min-h-0 flex-1 overflow-y-auto overscroll-contain pe-[6px] font-body text-[13px] font-bold leading-relaxed text-white/85 [touch-action:pan-y]"
+              >
+                <p className="whitespace-pre-line">{open.body}</p>
+              </div>
+
+              <button
+                type="button"
+                onClick={() => setOpen(null)}
+                className="mt-[12px] shrink-0 w-full rounded-full border-[3px] border-ink bg-gradient-to-b from-[#6fb6ff] to-[#3d8ff5] py-[6px] font-display text-[16px] text-white shadow-[0_3px_0_#1b4a8a] transition-transform active:translate-y-[2px] active:shadow-none"
+              >
+                {closeLabel}
+              </button>
+            </div>
+          </div>,
+          host,
+        )}
     </div>
   );
 }

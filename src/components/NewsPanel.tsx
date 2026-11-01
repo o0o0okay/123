@@ -14,6 +14,8 @@ const TAG_COLORS = ["bg-[#ff9a1f]", "bg-mint-500", "bg-[#ff4f1f]", "bg-skyg-400"
  * Tapping a card opens the full story in a dialog; the body scrolls only when
  * the text is longer than the box, and there is exactly one dialog at a time
  * (`open` is a single item, so opening another story replaces the first).
+ * The dialog carries a single X in its corner — no second "close" button — and
+ * it also closes on the backdrop or Escape.
  */
 export function NewsPanel({
   items,
@@ -25,7 +27,7 @@ export function NewsPanel({
   items: NewsItem[];
   title: string;
   className?: string;
-  /** label of the dismiss button inside a story */
+  /** accessible name of the X, the only dismiss control inside a story */
   closeLabel?: string;
   /** hint on every card that it opens the full story */
   moreLabel?: string;
@@ -144,7 +146,7 @@ export function NewsPanel({
             onClick={() => setOpen(null)}
           >
             <div
-              className="relative flex max-h-full w-full max-w-[420px] animate-slide-up flex-col rounded-[24px] border-[4px] border-ink bg-gradient-to-b from-navy-700 to-navy-900 p-[16px] pb-[14px] shadow-[0_12px_0_#060a28,0_30px_60px_rgba(0,0,0,0.55)]"
+              className="relative flex max-h-full w-full max-w-[420px] animate-slide-up flex-col rounded-[24px] border-[4px] border-ink bg-gradient-to-b from-navy-700 to-navy-900 p-[16px] shadow-[0_12px_0_#060a28,0_30px_60px_rgba(0,0,0,0.55)]"
               onClick={(e) => e.stopPropagation()}
             >
               <button
@@ -180,14 +182,6 @@ export function NewsPanel({
               >
                 <p className="whitespace-pre-line">{open.body}</p>
               </div>
-
-              <button
-                type="button"
-                onClick={() => setOpen(null)}
-                className="mt-[12px] shrink-0 w-full rounded-full border-[3px] border-ink bg-gradient-to-b from-[#6fb6ff] to-[#3d8ff5] py-[6px] font-display text-[16px] text-white shadow-[0_3px_0_#1b4a8a] transition-transform active:translate-y-[2px] active:shadow-none"
-              >
-                {closeLabel}
-              </button>
             </div>
           </div>,
           host,

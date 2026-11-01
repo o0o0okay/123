@@ -122,19 +122,19 @@ export function HistoryPanel({ t, lang, history, view, onView, className }: Hist
       {/* summary: in / out / net */}
       <div className="flex shrink-0 items-stretch gap-[6px]">
         <div className="flex flex-1 flex-col items-center rounded-[12px] border-[3px] border-ink bg-gradient-to-b from-navy-800 to-navy-900 px-[6px] py-[5px] shadow-[0_3px_0_#060a28]">
-          <span className="font-body text-[8px] font-black tracking-[0.1em] text-mint-400/80">{t.historyEarned}</span>
+          <span className="font-body text-[8px] font-black tracking-[0.1em] text-white">{t.historyEarned}</span>
           <span className="font-display text-[13px] leading-tight" style={{ color: GAIN }}>
             {num(withSign(totals.inCoins, "+"))}
           </span>
         </div>
         <div className="flex flex-1 flex-col items-center rounded-[12px] border-[3px] border-ink bg-gradient-to-b from-navy-800 to-navy-900 px-[6px] py-[5px] shadow-[0_3px_0_#060a28]">
-          <span className="font-body text-[8px] font-black tracking-[0.1em] text-flame-400/80">{t.historySpent}</span>
+          <span className="font-body text-[8px] font-black tracking-[0.1em] text-white">{t.historySpent}</span>
           <span className="font-display text-[13px] leading-tight" style={{ color: LOSS }}>
             {num(withSign(totals.outCoins, "−"))}
           </span>
         </div>
         <div className="flex flex-1 flex-col items-center rounded-[12px] border-[3px] border-ink bg-gradient-to-b from-navy-800 to-navy-900 px-[6px] py-[5px] shadow-[0_3px_0_#060a28]">
-          <span className="font-body text-[8px] font-black tracking-[0.1em] text-white/45">{t.historyNet}</span>
+          <span className="font-body text-[8px] font-black tracking-[0.1em] text-white">{t.historyNet}</span>
           <span
             className={cn("font-display text-[13px] leading-tight", totals.net === 0 && "text-white/60")}
             style={totals.net === 0 ? undefined : { color: totals.net > 0 ? GAIN : LOSS }}

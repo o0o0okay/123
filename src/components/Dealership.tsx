@@ -867,8 +867,16 @@ export function Dealership({
     const price = mode === "sell" ? sellValueOf(car) : car.price;
     // a car pledged for a loan stays visible in the garage list, but it is not for sale
     const isLocked = mode === "sell" && lockedSet.has(car.id);
+    // sell mode is money coming in (green); buying is a spend, so the price is
+    // shown neutral while affordable and red once the player cannot pay it
     const priceClass =
-      mode === "sell" ? (isLocked ? "text-amber-300/80" : "text-mint-400") : coins >= car.price ? "text-amber-400" : "text-[#ff8a6a]";
+      mode === "sell"
+        ? isLocked
+          ? "text-amber-300/80"
+          : "text-mint-400"
+        : coins >= car.price
+          ? "text-amber-400"
+          : "text-flame-400";
     return (
       // every tile is exactly the same size: a fixed card + a one-line name plate
       <div key={car.id} className="flex min-w-0 flex-col">

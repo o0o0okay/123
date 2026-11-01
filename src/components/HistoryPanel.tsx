@@ -122,7 +122,7 @@ export function HistoryPanel({ t, lang, history, view, onView, className }: Hist
           <span
             className={cn(
               "font-display text-[13px] leading-tight",
-              totals.net > 0 ? "text-amber-400" : totals.net < 0 ? "text-flame-400" : "text-white/60",
+              totals.net > 0 ? "text-mint-400" : totals.net < 0 ? "text-flame-400" : "text-white/60",
             )}
           >
             {num(signed(totals.net))}
@@ -197,9 +197,12 @@ export function HistoryPanel({ t, lang, history, view, onView, className }: Hist
                   </span>
                   <span className="flex shrink-0 flex-col items-end leading-none">
                     <span
+                      data-coins-dir={e.coins > 0 ? "in" : e.coins < 0 ? "out" : "none"}
                       className={cn(
-                        "font-display text-[12px]",
-                        e.coins > 0 ? "text-mint-400" : e.coins < 0 ? "text-flame-400" : "text-white/45",
+                        "font-display text-[12px] tracking-wide",
+                        e.coins > 0 && "text-mint-400 drop-shadow-[0_0_6px_rgba(70,240,160,0.35)]",
+                        e.coins < 0 && "text-flame-400 drop-shadow-[0_0_6px_rgba(255,90,90,0.35)]",
+                        e.coins === 0 && "text-white/45",
                       )}
                     >
                       {e.coins === 0 ? "—" : num(signed(e.coins))}

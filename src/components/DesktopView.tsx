@@ -1,4 +1,4 @@
-import { useState, type MouseEvent, type ReactNode } from "react";
+import { useEffect, useRef, useState, type MouseEvent, type ReactNode } from "react";
 import { cn } from "@/utils/cn";
 import { carStats, type Car, type CarStats } from "@/data/cars";
 import type { Lang, Strings } from "@/i18n";
@@ -36,7 +36,7 @@ import type { DailyView } from "@/data/daily";
 import { RacePanel, type RaceProps } from "./RacePanel";
 import { NewsPanel } from "./NewsPanel";
 import { StatPills, StatsRow } from "./Stats";
-import { GameSidebar } from "./GameSidebar";
+import { DOCK_OPEN, DOCK_RAIL, GameSidebar } from "./GameSidebar";
 import { CarFace } from "./BottomBar";
 import { SlotButton } from "./ui";
 import type { Player } from "./WelcomeScreen";
@@ -539,6 +539,25 @@ export function DesktopView(p: DesktopViewProps) {
   const { t, lang, viewCar, viewStats } = p;
   const loggedIn = p.screen === "home" && !!p.player;
 
+  /* the left dock pushes the home layout: while it is open the whole board
+     shrinks just enough to leave its strip free, then relaxes again */
+  const [dockOpen, setDockOpen] = useState(false);
+  const compact = loggedIn && dockOpen;
+  const wrapRef = useRef<HTMLDivElement | null>(null);
+  const [boardW, setBoardW] = useState(0);
+  useEffect(() => {
+    const el = wrapRef.current;
+    if (!el) return;
+    setBoardW(el.clientWidth);
+    const ro = new ResizeObserver(() => setBoardW(el.clientWidth));
+    ro.observe(el);
+    return () => ro.disconnect();
+  }, [loggedIn]);
+  /** free strip the dock needs on the inline-start edge */
+  const dockGutter = (compact ? DOCK_OPEN : DOCK_RAIL) + 10;
+  /** 1 when closed; just enough shrink for the open dock to fit beside the board */
+  const fit = compact && boardW > 0 ? Math.max(0.7, (boardW - dockGutter) / boardW) : 1;
+
   const tabs: [RightTab, string][] = [
     ["garage", t.garage],
     ["tasks", t.tabTasks],
@@ -550,7 +569,7 @@ export function DesktopView(p: DesktopViewProps) {
     <div className="relative flex h-full flex-col">
       <TopBar {...p} />
 
-      <div className="relative grid min-h-0 flex-1 grid-cols-[370px_minmax(0,1fr)_350px] gap-[24px] pb-[10px] pe-[34px] ps-[66px] pt-[8px]">
+      <div ref={wrapRef} data-home-wrap="" className="relative min-h-0 flex-1 overflow-hidden">
         {/* home navigation dock — lives in the empty strip next to the driver card */}
         {loggedIn && (
           <GameSidebar
@@ -570,9 +589,31 @@ export function DesktopView(p: DesktopViewProps) {
             onOptions={p.onOptions}
             onInvite={p.onInvite}
             taskBadge={p.taskBadge}
+            onExpandedChange={setDockOpen}
           />
         )}
 
+        {/* the whole board shrinks a touch while the dock is out, so the dock
+            gets its own strip and never covers the card or the car stage */}
+        <div
+          data-home-grid=""
+          data-compact={compact ? "1" : undefined}
+          style={{
+            width: "100%",
+            height: compact ? `calc(100% / ${fit})` : "100%",
+            transform: compact ? `scale(${fit})` : undefined,
+            // shrink away from the dock: keep the far (inline-end) edge fixed
+            transformOrigin: lang === "fa" ? "top left" : "top right",
+            transitionProperty: "transform, height, padding",
+            transitionDuration: "300ms",
+            transitionTimingFunction: "cubic-bezier(0.22, 1, 0.36, 1)",
+            paddingInlineStart: compact ? 0 : DOCK_RAIL + 10,
+          }}
+          className={cn(
+            "absolute right-0 top-0 grid grid-cols-[370px_minmax(0,1fr)_350px] gap-[24px]",
+            "pb-[10px] pe-[34px] pt-[8px]",
+          )}
+        >
         {/* left: login or driver card */}
         <aside className="flex min-h-0 items-center">
           {loggedIn ? <DriverPanel {...p} /> : <SolanaLoginPanel {...p} />}
@@ -673,6 +714,7 @@ export function DesktopView(p: DesktopViewProps) {
             </div>
           )}
         </aside>
+        </div>
       </div>
 
       <Footer {...p} />

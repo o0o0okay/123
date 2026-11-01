@@ -29,7 +29,6 @@ export const DOCK_RAIL = 56;
 export const DOCK_OPEN = 190;
 
 const LABEL = 118; // label column width while expanded
-const OPEN_DELAY = 140; // ms of hover before the dock slides out
 
 export interface GameSidebarProps {
   t: Strings;
@@ -59,42 +58,19 @@ export interface GameSidebarProps {
 /**
  * Left-edge navigation dock of the home screen.
  *
- * Collapsed it is a slim rail in the gutter next to the driver card; hovering
- * (or focusing / pinning) slides the labelled panel out and the home layout
- * compacts to make room — nothing is ever covered. The chevron in the header
- * closes it again, even while the pointer is still on the dock.
+ * Collapsed it is a slim rail in the gutter next to the driver card. It is
+ * opened by a deliberate click (the profile button or the rail itself) — never
+ * by hovering, so moving the pointer across the edge of the screen cannot
+ * disturb the home board. Opening compacts the layout to make room; a click on
+ * the chevron, anywhere outside, or Escape closes it again.
  */
 export function GameSidebar(p: GameSidebarProps) {
   const { t, lang, taskBadge } = p;
   const fs = useFullscreen();
-  const [pinned, setPinned] = useState(false);
-  const [hovered, setHovered] = useState(false);
-  const [focused, setFocused] = useState(false);
-  /** set right after an explicit "close" so hovering cannot immediately reopen it */
-  const [dismissed, setDismissed] = useState(false);
-  const timer = useRef<number | null>(null);
+  const [open, setOpen] = useState(false);
   const navRef = useRef<HTMLElement | null>(null);
 
-  /**
-   * Closing shrinks the dock under the cursor, which makes the browser fire a
-   * fresh pointerenter on the newly laid-out children — enough to pop the
-   * panel straight back open. While the close latch is set we ignore hover;
-   * it is released as soon as the pointer moves off the dock again.
-   */
-  useEffect(() => {
-    if (!dismissed) return;
-    const onMove = (e: PointerEvent) => {
-      const el = navRef.current;
-      if (!el) return;
-      const r = el.getBoundingClientRect();
-      const inside = e.clientX >= r.left && e.clientX <= r.right && e.clientY >= r.top && e.clientY <= r.bottom;
-      if (!inside) setDismissed(false);
-    };
-    document.addEventListener("pointermove", onMove, { passive: true });
-    return () => document.removeEventListener("pointermove", onMove);
-  }, [dismissed]);
-
-  const expanded = !dismissed && (pinned || hovered || focused);
+  const expanded = open;
 
   // let the home layout compact / relax around the dock
   const notify = p.onExpandedChange;
@@ -102,35 +78,31 @@ export function GameSidebar(p: GameSidebarProps) {
     notify?.(expanded);
   }, [expanded, notify]);
 
+  // outside click + Escape close the panel
   useEffect(() => {
-    return () => {
-      if (timer.current) window.clearTimeout(timer.current);
+    if (!open) return;
+    const onDown = (e: PointerEvent) => {
+      const el = navRef.current;
+      if (el && !el.contains(e.target as Node)) setOpen(false);
     };
-  }, []);
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key === "Escape") setOpen(false);
+    };
+    document.addEventListener("pointerdown", onDown, true);
+    document.addEventListener("keydown", onKey);
+    return () => {
+      document.removeEventListener("pointerdown", onDown, true);
+      document.removeEventListener("keydown", onKey);
+    };
+  }, [open]);
 
-  const openSoon = () => {
-    if (dismissed) return;
-    if (timer.current) window.clearTimeout(timer.current);
-    timer.current = window.setTimeout(() => setHovered(true), OPEN_DELAY);
-  };
+  const toggle = () => setOpen((v) => !v);
 
-  const closeNow = () => {
-    if (timer.current) window.clearTimeout(timer.current);
-    timer.current = null;
-    setHovered(false);
-  };
-
-  const toggle = () => {
-    if (timer.current) window.clearTimeout(timer.current);
-    if (expanded) {
-      // close: drop the pin and ignore the hover that produced the click
-      setPinned(false);
-      setHovered(false);
-      setDismissed(true);
-    } else {
-      setPinned(true);
-      setDismissed(false);
-    }
+  /** a click on the empty part of the rail opens it; clicks on a button are its own */
+  const onRailClick = (e: React.MouseEvent<HTMLElement>) => {
+    if (open) return;
+    if ((e.target as HTMLElement).closest("button")) return;
+    setOpen(true);
   };
 
   /* label column: collapses to zero width so the rail stays centred */
@@ -305,14 +277,9 @@ export function GameSidebar(p: GameSidebarProps) {
         ref={navRef}
         data-sidebar=""
         data-expanded={expanded ? "1" : undefined}
-        data-pinned={pinned ? "1" : undefined}
+        data-pinned={expanded ? "1" : undefined}
         aria-label={t.menu}
-        onPointerEnter={openSoon}
-        onPointerLeave={closeNow}
-        onFocus={() => setFocused(true)}
-        onBlur={(e) => {
-          if (!e.currentTarget.contains(e.relatedTarget as Node | null)) setFocused(false);
-        }}
+        onClick={onRailClick}
         style={
           {
             "--dock-label": `${LABEL}px`,
@@ -342,11 +309,18 @@ export function GameSidebar(p: GameSidebarProps) {
             !expanded && "justify-center",
           )}
         >
-          <CarFace
-            car={p.car}
-            size={30}
-            className="shrink-0 border-[2.5px] border-amber-400 shadow-[0_2px_0_#0a1038]"
-          />
+          <span className="relative shrink-0">
+            <CarFace car={p.car} size={30} className="border-[2.5px] border-amber-400 shadow-[0_2px_0_#0a1038]" />
+            {!expanded && (
+              /* collapsed hint: the rail is opened with a click */
+              <span
+                data-sidebar-hint=""
+                className="absolute -end-[3px] -bottom-[3px] flex h-[13px] w-[13px] items-center justify-center rounded-full border-[2px] border-ink bg-gradient-to-b from-[#ffd23a] to-[#ff9a1f] text-[#4a2a00]"
+              >
+                <ChevronIcon width={7} height={7} className={rotate ? "rotate-180" : undefined} />
+              </span>
+            )}
+          </span>
           <span className={cn(label, "flex min-w-0 flex-col leading-none")}>
             <span className="font-body text-[8px] font-black uppercase tracking-[0.14em] text-skyg-300/60">
               {t.goodDay}

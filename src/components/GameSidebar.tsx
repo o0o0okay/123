@@ -5,13 +5,13 @@ import type { Lang, Strings } from "@/i18n";
 import { useFullscreen } from "@/hooks";
 import {
   BoltIcon,
+  CarIcon,
   ChevronIcon,
   ClipboardIcon,
   CoinIcon,
   FlagIcon,
   FullscreenIcon,
   GearIcon,
-  HomeIcon,
   MegaphoneIcon,
   PlusIcon,
   SpeakerIcon,
@@ -112,7 +112,7 @@ export function GameSidebar(p: GameSidebarProps) {
   );
 
   const menu: { id: DockTab; text: string; icon: ReactNode; badge?: number }[] = [
-    { id: "garage", text: t.navHome, icon: <HomeIcon width={16} height={16} /> },
+    { id: "garage", text: t.garage, icon: <CarIcon width={17} height={15} /> },
     { id: "tasks", text: t.tabTasks, icon: <ClipboardIcon width={16} height={16} />, badge: taskBadge },
     { id: "race", text: t.tabRace, icon: <FlagIcon width={15} height={15} /> },
     { id: "news", text: t.tabNews, icon: <MegaphoneIcon width={16} height={16} /> },

@@ -552,3 +552,15 @@ export const CompareIcon = (p: P) => (
   </Svg>
 );
 
+export const HomeIcon = (p: P) => (
+  <Svg {...p}>
+    <path d="M11.1 3.1a1.4 1.4 0 0 1 1.8 0l7.4 6.2c.5.4.7 1 .7 1.6v8.2c0 .9-.7 1.6-1.6 1.6h-4.3c-.7 0-1.2-.5-1.2-1.2v-4.1c0-.6-.5-1.1-1.1-1.1h-1.6c-.6 0-1.1.5-1.1 1.1v4.1c0 .7-.5 1.2-1.2 1.2H4.6C3.7 20.7 3 20 3 19.1v-8.2c0-.6.2-1.2.7-1.6l7.4-6.2z" />
+  </Svg>
+);
+
+/** Thin chevron pointing to the right (flip with rtl / scale-x). */
+export const ChevronIcon = (p: P) => (
+  <Stroke {...p} strokeWidth={3.2}>
+    <path d="M9.5 5.5 16 12l-6.5 6.5" />
+  </Stroke>
+);

@@ -36,6 +36,7 @@ import type { DailyView } from "@/data/daily";
 import { RacePanel, type RaceProps } from "./RacePanel";
 import { NewsPanel } from "./NewsPanel";
 import { StatPills, StatsRow } from "./Stats";
+import { GameSidebar } from "./GameSidebar";
 import { CarFace } from "./BottomBar";
 import { SlotButton } from "./ui";
 import type { Player } from "./WelcomeScreen";
@@ -83,6 +84,8 @@ export interface DesktopViewProps {
   onOpenWalletModal: () => void;
 
   onOptions: () => void;
+  /** copies the referral link shown by the left dock */
+  onInvite: () => void;
   onExit: () => void;
   onLogout: () => void;
   onStartChase: () => void;
@@ -547,7 +550,24 @@ export function DesktopView(p: DesktopViewProps) {
     <div className="relative flex h-full flex-col">
       <TopBar {...p} />
 
-      <div className="relative grid min-h-0 flex-1 grid-cols-[370px_minmax(0,1fr)_350px] gap-[24px] px-[34px] pb-[10px] pt-[8px]">
+      <div className="relative grid min-h-0 flex-1 grid-cols-[370px_minmax(0,1fr)_350px] gap-[24px] pb-[10px] pe-[34px] ps-[60px] pt-[8px]">
+        {/* home navigation dock — lives in the empty strip next to the driver card */}
+        {loggedIn && (
+          <GameSidebar
+            t={t}
+            lang={lang}
+            activeTab={p.rightTab}
+            onTab={p.onRightTab}
+            onOpenDealer={p.onOpenDealer}
+            onOpenStaking={p.onOpenStaking}
+            onOpenNft={p.onOpenNft}
+            onOpenCoinShop={p.onOpenCoinShop}
+            onOptions={p.onOptions}
+            onInvite={p.onInvite}
+            taskBadge={p.taskBadge}
+          />
+        )}
+
         {/* left: login or driver card */}
         <aside className="flex min-h-0 items-center">
           {loggedIn ? <DriverPanel {...p} /> : <SolanaLoginPanel {...p} />}

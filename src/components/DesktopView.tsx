@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState, type MouseEvent, type ReactNode } from "react";
+import { useEffect, useMemo, useRef, useState, type MouseEvent, type ReactNode } from "react";
 import { cn } from "@/utils/cn";
 import { carStats, type Car, type CarStats } from "@/data/cars";
 import type { Lang, Strings } from "@/i18n";
@@ -33,10 +33,11 @@ import { CarShowcase } from "./CarShowcase";
 import { GarageView, type GarageData } from "./GaragePanel";
 import { TasksPanel, type TaskView } from "./TasksPanel";
 import type { DailyView } from "@/data/daily";
-import { RacePanel, type RaceProps } from "./RacePanel";
+import { RacePanel, type RaceProps, type RaceTabs } from "./RacePanel";
+import type { StakingTab } from "./Staking";
 import { NewsPanel } from "./NewsPanel";
 import { StatPills, StatsRow } from "./Stats";
-import { DOCK_OPEN, DOCK_RAIL, GameSidebar } from "./GameSidebar";
+import { DOCK_OPEN, DOCK_RAIL, GameSidebar, type DockSubs } from "./GameSidebar";
 import { CarFace } from "./BottomBar";
 import { SlotButton } from "./ui";
 import type { Player } from "./WelcomeScreen";
@@ -66,7 +67,7 @@ export interface DesktopViewProps {
   onPrev: () => void;
   onNext: () => void;
   onOpenDealer: () => void;
-  onOpenStaking: () => void;
+  onOpenStaking: (tab?: StakingTab) => void;
   /** opens the NFT marketplace */
   onOpenNft: () => void;
   /** opens the coin shop (buy coins with SOL) */
@@ -94,6 +95,9 @@ export interface DesktopViewProps {
   onCopied?: () => void;
   rightTab: RightTab;
   onRightTab: (t: RightTab) => void;
+  /** which view of the race panel is showing (modes / ranks) */
+  raceTab: RaceTabs;
+  onRaceTab: (v: RaceTabs) => void;
 }
 
 const PANEL =
@@ -182,7 +186,7 @@ function TopBar(p: DesktopViewProps) {
         <button
           type="button"
           id="desktop-staking-btn"
-          onClick={p.onOpenStaking}
+          onClick={() => p.onOpenStaking()}
           onPointerEnter={() => prefetch.staking()}
           onFocus={() => prefetch.staking()}
           title={t.stakingSub}
@@ -565,6 +569,39 @@ export function DesktopView(p: DesktopViewProps) {
     ["news", t.tabNews],
   ];
 
+  /* dock accordions: a section that has tabs of its own lists them under its
+     row, so the same view can be reached from the dock or from the panel */
+  const dockSubs: DockSubs = useMemo(() => ({
+    race: [
+      {
+        id: "modes",
+        text: t.raceTab,
+        active: p.rightTab === "race" && p.raceTab === "modes",
+        onSelect: () => {
+          p.onRightTab("race");
+          p.onRaceTab("modes");
+        },
+      },
+      {
+        id: "ranks",
+        text: t.boardTab,
+        active: p.rightTab === "race" && p.raceTab === "ranks",
+        onSelect: () => {
+          p.onRightTab("race");
+          p.onRaceTab("ranks");
+        },
+      },
+    ],
+    // the staking screen has four tabs of its own: the dock lists them and
+    // opens the screen straight on the picked one
+    staking: (["pools", "stake", "nft", "loans"] as const).map((id) => ({
+      id,
+      text: { pools: t.tabPools, stake: t.tabStake, nft: t.tabNft, loans: t.tabLoans }[id],
+      active: false,
+      onSelect: () => p.onOpenStaking(id),
+    })),
+  }), [t.raceTab, t.boardTab, t.tabPools, t.tabStake, t.tabNft, t.tabLoans, p.rightTab, p.raceTab, p.onRightTab, p.onRaceTab, p.onOpenStaking]);
+
   return (
     <div className="relative flex h-full flex-col">
       <TopBar {...p} />
@@ -589,6 +626,7 @@ export function DesktopView(p: DesktopViewProps) {
             onOptions={p.onOptions}
             onInvite={p.onInvite}
             taskBadge={p.taskBadge}
+            subs={dockSubs}
             onExpandedChange={setDockOpen}
           />
         )}
@@ -687,7 +725,15 @@ export function DesktopView(p: DesktopViewProps) {
               className="absolute inset-x-0 bottom-0 top-[26px] animate-slide-up rounded-[22px] border-[4px] border-ink bg-navy-950/80 px-[12px] pb-[12px] pt-[26px] shadow-[0_8px_0_#060a28,0_0_0_3px_rgba(120,200,255,0.35)] backdrop-blur-[2px]"
             >
               {p.rightTab === "race" ? (
-                <RacePanel t={t} lang={lang} {...p.race} dense className="h-full" />
+                <RacePanel
+                  t={t}
+                  lang={lang}
+                  {...p.race}
+                  view={p.raceTab}
+                  onView={p.onRaceTab}
+                  dense
+                  className="h-full"
+                />
               ) : p.rightTab === "tasks" ? (
                 <TasksPanel
                   t={t}

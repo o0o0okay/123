@@ -11,6 +11,7 @@ import { StatPills, StatsRow } from "./components/Stats";
 import { BottomBar, type TabKey } from "./components/BottomBar";
 import { WelcomeScreen, type Player } from "./components/WelcomeScreen";
 import { DesktopView, type RightTab } from "./components/DesktopView";
+import type { StakingTab } from "./components/Staking";
 import { ExitDialog, LoadingOverlay, OptionsModal, Toast, type ToastData, type ToastType } from "./components/Overlays";
 import { GameButton, SlotButton } from "./components/ui";
 import { CoinFlyProvider, useCoinFly } from "./components/CoinFlyEffect";
@@ -25,7 +26,7 @@ import { TASKS, type TaskMetric } from "./data/tasks";
 import type { CoinPack } from "./data/coinPacks";
 import { claimDaily, DEFAULT_DAILY, resolveDaily } from "./data/daily";
 import { TasksView, type TaskView } from "./components/TasksPanel";
-import { RaceView, type RaceProps } from "./components/RacePanel";
+import { RaceView, type RaceProps, type RaceTabs } from "./components/RacePanel";
 import { SellConfirmModal } from "./components/DealerBits";
 import { LazyPanel, panels, prefetch, preloadPanels } from "./components/lazy";
 import { simulateRace, type RaceMode, type RaceResult } from "./data/races";
@@ -101,6 +102,8 @@ function AppContent({
   const [screen, setScreen] = useState<Screen>("login");
   const [tab, setTab] = useState<TabKey>("garage");
   const [rightTab, setRightTab] = useState<RightTab>("garage");
+  /** second level of the race panel (modes / ranks), also driven by the dock */
+  const [raceTab, setRaceTab] = useState<RaceTabs>("modes");
   const [exitOpen, setExitOpen] = useState(false);
   const [walletModalOpen, setWalletModalOpen] = useState(false);
   const [toast, setToast] = useState<ToastData | null>(null);
@@ -117,7 +120,7 @@ function AppContent({
   /** NFT marketplace overlay */
   const [nftOpen, setNftOpen] = useState(false);
   /** which board the staking panel opens on (pools / stake / nft / loans) */
-  const [stakingTab, setStakingTab] = useState<"pools" | "stake" | "nft" | "loans">("pools");
+  const [stakingTab, setStakingTab] = useState<StakingTab>("pools");
   const [sellTarget, setSellTarget] = useState<Car | null>(null);
   /** active race: mode + (null while running) result */
   const [coinShopOpen, setCoinShopOpen] = useState(false);
@@ -292,11 +295,12 @@ function AppContent({
   };
 
   /* ---------------- staking / liquidity / loans ---------------- */
-  const openStaking = () => {
+  /** opens the staking screen, optionally straight on one of its four tabs */
+  const openStaking = (tab: StakingTab = "pools") => {
     sfx("swoosh");
     // start the chunk before the first render asks for it
     prefetch.staking();
-    setStakingTab("pools");
+    setStakingTab(tab);
     setStakingOpen(true);
   };
 
@@ -1317,7 +1321,7 @@ function AppContent({
             variant="green"
             className="h-[56px] flex-1"
             id="mobile-login-staking-btn"
-            onClick={openStaking}
+            onClick={() => openStaking()}
             onPointerEnter={() => prefetch.staking()}
           >
             <span className="flex flex-col items-center gap-[1px] font-display text-[11px] leading-none tracking-wide text-[#04120c]">
@@ -1407,6 +1411,8 @@ function AppContent({
             sfx("click");
             setRightTab(v);
           }}
+          raceTab={raceTab}
+          onRaceTab={setRaceTab}
         />
       ) : screen === "home" && player ? (
         <WelcomeScreen

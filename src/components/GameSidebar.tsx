@@ -10,6 +10,7 @@ import {
 import { cn } from "@/utils/cn";
 import type { Car } from "@/data/cars";
 import type { Lang, Strings } from "@/i18n";
+import type { StakingTab } from "./Staking";
 import { useFullscreen } from "@/hooks";
 import {
   BoltIcon,
@@ -30,6 +31,21 @@ import { CarFace } from "./BottomBar";
 
 /** Tabs the home dock can switch the right-hand panel to. */
 export type DockTab = "garage" | "tasks" | "race" | "news";
+
+/** one row of a dock item's accordion (e.g. the two views of the race panel) */
+export interface DockSubItem {
+  id: string;
+  text: string;
+  /** highlighted when the panel is currently showing this view */
+  active: boolean;
+  onSelect: () => void;
+}
+
+/** every clickable section of the dock */
+export type DockId = DockTab | "dealer" | "staking" | "nft" | "coins";
+
+/** children per section — only sections that hold tabs of their own have any */
+export type DockSubs = Partial<Record<DockId, DockSubItem[]>>;
 
 /** Width of the collapsed rail, in stage pixels (kept in sync with DesktopView). */
 export const DOCK_RAIL = 56;
@@ -101,7 +117,8 @@ export interface GameSidebarProps {
   activeTab: DockTab;
   onTab: (tab: DockTab) => void;
   onOpenDealer: () => void;
-  onOpenStaking: () => void;
+  /** opens the staking screen; the dock's children pick one of its tabs */
+  onOpenStaking: (tab?: StakingTab) => void;
   onOpenNft: () => void;
   onOpenCoinShop: () => void;
   onToggleSound: () => void;
@@ -110,6 +127,8 @@ export interface GameSidebarProps {
   /** copies the referral link for the connected driver */
   onInvite: () => void;
   taskBadge: number;
+  /** accordion children of the sections that have tabs of their own */
+  subs?: DockSubs;
   /** reports every open/close so the layout can make room for the dock */
   onExpandedChange?: (open: boolean) => void;
 }
@@ -127,9 +146,22 @@ export function GameSidebar(p: GameSidebarProps) {
   const { t, lang, taskBadge } = p;
   const fs = useFullscreen();
   const [open, setOpen] = useState(false);
+  /** dock section whose accordion is out; only one section is ever unfolded */
+  const [openSub, setOpenSub] = useState<DockId | null>(null);
   const navRef = useRef<HTMLElement | null>(null);
 
   const expanded = open;
+  const subsOf = (id: DockId) => p.subs?.[id] ?? [];
+
+  // picking a section that holds tabs unfolds it, so its views are one click away.
+  // Only the active tab is watched: `subs` is rebuilt by the parent on every
+  // render and must not slam the curtain the player just opened.
+  const subsRef = useRef(p.subs);
+  subsRef.current = p.subs;
+  useEffect(() => {
+    const list = subsRef.current?.[p.activeTab];
+    setOpenSub(list && list.length ? p.activeTab : null);
+  }, [p.activeTab]);
 
   // let the home layout compact / relax around the dock
   const notify = p.onExpandedChange;
@@ -189,7 +221,7 @@ export function GameSidebar(p: GameSidebarProps) {
       id: "staking",
       text: t.staking,
       icon: icon(BoltIcon, "bolt", ICON.market),
-      onClick: p.onOpenStaking,
+      onClick: () => p.onOpenStaking(),
       tone: "bg-mint-400/15 text-mint-400",
     },
     {
@@ -223,87 +255,242 @@ export function GameSidebar(p: GameSidebarProps) {
 
   /* ---------------- rows ---------------- */
 
-  /** top group: icon + label, amber pill when current (same look as the panel tabs) */
-  const menuRow = (m: (typeof menu)[number]) => {
-    const active = p.activeTab === m.id;
+  /**
+   * The curtain: a grid whose row track goes 0fr → 1fr, so the children slide
+   * out under their parent. It is a sibling of the row — never nested inside
+   * its button — and is closed to clicks while folded.
+   */
+  const curtain = (id: DockId, subs: DockSubItem[]) => {
+    const unfolded = expanded && openSub === id;
     return (
-      <button
-        key={m.id}
-        type="button"
-        data-sidebar-item={m.id}
-        data-sidebar-active={active ? "1" : undefined}
-        aria-current={active ? "page" : undefined}
-        aria-label={m.text}
-        title={m.text}
-        onClick={() => p.onTab(m.id)}
+      <div
+        data-sidebar-curtain={id}
+        aria-hidden={!unfolded}
         className={cn(
-          "relative flex h-[31px] w-full shrink-0 items-center gap-[9px] rounded-[11px] transition-all duration-150",
-          expanded ? "ps-[7px] pe-[8px]" : "justify-center",
-          active
-            ? "bg-gradient-to-b from-[#ffd23a] to-[#ff9a1f] shadow-[0_3px_0_#9a4a08]"
-            : "text-white/70 hover:bg-white/10 hover:text-white",
+          "grid transition-all duration-300 ease-out",
+          unfolded ? "mt-[1px] grid-rows-[1fr] opacity-100" : "grid-rows-[0fr] opacity-0",
         )}
       >
-        <span
-          data-sidebar-glyph="menu"
-          style={{ width: MENU_BOX, height: MENU_BOX }}
-          className={cn(
-            "relative flex shrink-0 items-center justify-center",
-            active ? "text-[#5c3306]" : "text-skyg-300/70",
-          )}
-        >
-          {m.icon}
-        </span>
-        <span
-          className={cn(
-            label,
-            "font-display text-[11.5px] tracking-wide",
-            active ? "text-[#4a2a00]" : "text-white/80",
-          )}
-        >
-          {m.text}
-        </span>
-        {!!m.badge && m.badge > 0 && (
-          <span
-            data-sidebar-badge=""
-            className={cn(
-              "absolute flex items-center justify-center rounded-full border-[2px] border-ink bg-flame-500 font-body font-black leading-none text-white",
-              expanded
-                ? "end-[6px] top-1/2 h-[16px] min-w-[16px] -translate-y-1/2 px-[4px] text-[9px]"
-                : "-end-[2px] -top-[3px] h-[15px] min-w-[15px] px-[3px] text-[8.5px]",
-            )}
-          >
-            {m.badge}
-          </span>
-        )}
-      </button>
+        <div className="min-h-0 overflow-hidden">
+          <div className="relative flex flex-col gap-[1px] py-[2px]">
+            {/* guide line that ties the children to their parent row */}
+            <span
+              aria-hidden="true"
+              className="pointer-events-none absolute inset-y-[14px] start-[20px] w-[2px] rounded-full bg-white/12"
+            />
+            {subs.map((sub) => (
+              <button
+                key={sub.id}
+                type="button"
+                tabIndex={unfolded ? undefined : -1}
+                data-sidebar-sub={`${id}:${sub.id}`}
+                data-sidebar-sub-active={sub.active ? "1" : undefined}
+                aria-current={sub.active ? "true" : undefined}
+                onClick={() => {
+                  sub.onSelect();
+                  setOpenSub(id);
+                }}
+                className={cn(
+                  "relative ms-[30px] flex h-[24px] items-center rounded-[7px] pe-[7px] ps-[11px] text-start transition-colors",
+                  sub.active
+                    ? "bg-white/12 text-white shadow-[inset_0_1px_0_rgba(255,255,255,0.12)]"
+                    : "text-white/55 hover:bg-white/8 hover:text-white",
+                )}
+              >
+                {/* elbow that meets the guide line */}
+                <span
+                  aria-hidden="true"
+                  className={cn(
+                    "pointer-events-none absolute start-[-10px] top-1/2 h-[2px] w-[10px] -translate-y-1/2",
+                    sub.active ? "bg-amber-400/70" : "bg-white/12",
+                  )}
+                />
+                <span
+                  aria-hidden="true"
+                  className={cn(
+                    "me-[7px] h-[5px] w-[5px] shrink-0 rounded-full",
+                    sub.active ? "bg-amber-400" : "bg-white/25",
+                  )}
+                />
+                <span className="overflow-hidden whitespace-nowrap font-body text-[11px] font-extrabold tracking-wide">
+                  {sub.text}
+                </span>
+              </button>
+            ))}
+          </div>
+        </div>
+      </div>
     );
   };
 
-  /** second group: inset card, one coloured glyph per market */
-  const marketRow = (m: (typeof markets)[number]) => (
-    <button
-      key={m.id}
-      type="button"
-      data-sidebar-item={m.id}
-      aria-label={m.text}
-      title={m.text}
-      onClick={m.onClick}
-      className={cn(
-        "flex h-[28px] w-full shrink-0 items-center gap-[8px] rounded-[9px] transition-colors hover:bg-white/10",
-        expanded ? "ps-[5px] pe-[6px]" : "justify-center",
-      )}
-    >
-      <span
-        data-sidebar-glyph="market"
-        style={{ width: MARKET_BOX, height: MARKET_BOX }}
-        className={cn("flex shrink-0 items-center justify-center rounded-[7px]", m.tone)}
-      >
-        {m.icon}
-      </span>
-      <span className={cn(label, "font-body text-[11px] font-extrabold tracking-wide text-white/75")}>{m.text}</span>
-    </button>
-  );
+  /**
+   * Top group: icon + label, amber pill when current (same look as the panel
+   * tabs). Sections that hold tabs of their own get an accordion: the chevron
+   * unfolds their views right under the row, like a curtain.
+   */
+  const menuRow = (m: (typeof menu)[number]) => {
+    const active = p.activeTab === m.id;
+    const subs = subsOf(m.id);
+    const hasChildren = subs.length > 0;
+    const unfolded = expanded && openSub === m.id;
+    /** row click lands on the section and pulls its curtain down */
+    const pick = () => {
+      p.onTab(m.id);
+      setOpenSub(hasChildren ? m.id : null);
+    };
+
+    return (
+      <div key={m.id} className="relative shrink-0">
+        <button
+          type="button"
+          data-sidebar-item={m.id}
+          data-sidebar-active={active ? "1" : undefined}
+          data-sidebar-unfolded={unfolded ? "1" : undefined}
+          aria-current={active ? "page" : undefined}
+          aria-label={m.text}
+          aria-expanded={hasChildren ? unfolded : undefined}
+          title={m.text}
+          onClick={pick}
+          className={cn(
+            "relative flex h-[31px] w-full shrink-0 items-center gap-[9px] rounded-[11px] transition-all duration-150",
+            expanded ? "ps-[7px]" : "justify-center",
+            // leave room for the accordion chevron on the end side
+            expanded ? (hasChildren ? "pe-[24px]" : "pe-[8px]") : "",
+            active
+              ? "bg-gradient-to-b from-[#ffd23a] to-[#ff9a1f] shadow-[0_3px_0_#9a4a08]"
+              : "text-white/70 hover:bg-white/10 hover:text-white",
+          )}
+        >
+          <span
+            data-sidebar-glyph="menu"
+            style={{ width: MENU_BOX, height: MENU_BOX }}
+            className={cn(
+              "relative flex shrink-0 items-center justify-center",
+              active ? "text-[#5c3306]" : "text-skyg-300/70",
+            )}
+          >
+            {m.icon}
+          </span>
+          <span
+            className={cn(
+              label,
+              "font-display text-[11.5px] tracking-wide",
+              active ? "text-[#4a2a00]" : "text-white/80",
+            )}
+          >
+            {m.text}
+          </span>
+          {!!m.badge && m.badge > 0 && (
+            <span
+              data-sidebar-badge=""
+              className={cn(
+                "absolute flex items-center justify-center rounded-full border-[2px] border-ink bg-flame-500 font-body font-black leading-none text-white",
+                expanded
+                  ? cn("top-1/2 h-[16px] min-w-[16px] -translate-y-1/2 px-[4px] text-[9px]", hasChildren ? "end-[25px]" : "end-[6px]")
+                  : "-end-[2px] -top-[3px] h-[15px] min-w-[15px] px-[3px] text-[8.5px]",
+              )}
+            >
+              {m.badge}
+            </span>
+          )}
+        </button>
+
+        {/* the curtain itself: a sibling button so no button nests in another */}
+        {hasChildren && expanded && (
+          <button
+            type="button"
+            data-sidebar-accordion={m.id}
+            aria-expanded={unfolded}
+            aria-label={unfolded ? t.collapseMenu : t.expandMenu}
+            title={unfolded ? t.collapseMenu : t.expandMenu}
+            onClick={(e) => {
+              e.stopPropagation();
+              setOpenSub(unfolded ? null : m.id);
+            }}
+            className={cn(
+              "absolute end-[3px] top-[6px] flex h-[19px] w-[19px] items-center justify-center rounded-[6px] transition-colors",
+              active ? "text-[#5c3306]/70 hover:bg-[#5c3306]/15" : "text-white/40 hover:bg-white/10 hover:text-white",
+            )}
+          >
+            {icon(ChevronIcon, "chevron", 10, {
+              className: cn(
+                "transition-transform duration-300",
+                unfolded ? "rotate-90" : flip ? "rotate-180" : undefined,
+              ),
+            })}
+          </button>
+        )}
+
+        {hasChildren && curtain(m.id, subs)}
+      </div>
+    );
+  };
+
+  /**
+   * Second group: inset card, one coloured glyph per market. A market that has
+   * tabs of its own (staking) unfolds them under its tile the same way.
+   */
+  const marketRow = (m: (typeof markets)[number]) => {
+    const id = m.id as DockId;
+    const subs = subsOf(id);
+    const hasChildren = subs.length > 0;
+    const unfolded = expanded && openSub === id;
+
+    return (
+      <div key={m.id} className="relative shrink-0">
+        <button
+          type="button"
+          data-sidebar-item={m.id}
+          data-sidebar-children={hasChildren ? "1" : undefined}
+          aria-label={m.text}
+          aria-expanded={hasChildren ? unfolded : undefined}
+          title={m.text}
+          onClick={() => {
+            m.onClick();
+            if (hasChildren) setOpenSub(id);
+          }}
+          className={cn(
+            "flex h-[28px] w-full shrink-0 items-center gap-[8px] rounded-[9px] transition-colors hover:bg-white/10",
+            expanded ? "ps-[5px]" : "justify-center",
+            expanded ? (hasChildren ? "pe-[21px]" : "pe-[6px]") : "",
+          )}
+        >
+          <span
+            data-sidebar-glyph="market"
+            style={{ width: MARKET_BOX, height: MARKET_BOX }}
+            className={cn("flex shrink-0 items-center justify-center rounded-[7px]", m.tone)}
+          >
+            {m.icon}
+          </span>
+          <span className={cn(label, "font-body text-[11px] font-extrabold tracking-wide text-white/75")}>{m.text}</span>
+        </button>
+
+        {hasChildren && expanded && (
+          <button
+            type="button"
+            data-sidebar-accordion={m.id}
+            aria-expanded={unfolded}
+            aria-label={unfolded ? t.collapseMenu : t.expandMenu}
+            title={unfolded ? t.collapseMenu : t.expandMenu}
+            onClick={(e) => {
+              e.stopPropagation();
+              setOpenSub(unfolded ? null : id);
+            }}
+            className="absolute end-[2px] top-[5px] flex h-[18px] w-[18px] items-center justify-center rounded-[6px] text-white/40 transition-colors hover:bg-white/10 hover:text-white"
+          >
+            {icon(ChevronIcon, "chevron", 9, {
+              className: cn(
+                "transition-transform duration-300",
+                unfolded ? "rotate-90" : flip ? "rotate-180" : undefined,
+              ),
+            })}
+          </button>
+        )}
+
+        {hasChildren && curtain(id, subs)}
+      </div>
+    );
+  };
 
   /** small square utility buttons (settings row) */
   const util = (opts: {

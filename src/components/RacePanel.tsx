@@ -30,6 +30,9 @@ const PRIMARY_ICON: Record<RaceMode["primary"], ReactNode> = {
   boost: <NitroIcon width={12} height={12} />,
 };
 
+/** the two views inside the race panel: mode cards or the weekly board */
+export type RaceTabs = "modes" | "ranks";
+
 export interface RaceProps {
   stats: CarStats;
   coins: number;
@@ -208,12 +211,27 @@ export function RacePanel({
   board,
   className,
   dense,
-}: RaceProps & { t: Strings; lang: Lang; className?: string; dense?: boolean }) {
+  view: viewProp,
+  onView,
+}: RaceProps & {
+  t: Strings;
+  lang: Lang;
+  className?: string;
+  dense?: boolean;
+  /** controlled view — the home dock drives it, so both stay in sync */
+  view?: RaceTabs;
+  onView?: (v: RaceTabs) => void;
+}) {
   const animatedCoins = useAnimatedNumber(coins);
   const { isPulsing } = useCoinFly();
   const totalWins = Object.values(wins).reduce((a, b) => a + b, 0);
-  /** race modes or the score board */
-  const [view, setView] = useState<"modes" | "ranks">("modes");
+  /** race modes or the score board (own state unless the dock controls it) */
+  const [innerView, setInnerView] = useState<RaceTabs>("modes");
+  const view = viewProp ?? innerView;
+  const setView = (v: RaceTabs) => {
+    setInnerView(v);
+    onView?.(v);
+  };
 
   return (
     <div className={cn("flex h-full flex-col gap-[9px]", className)}>

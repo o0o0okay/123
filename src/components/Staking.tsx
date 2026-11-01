@@ -83,7 +83,9 @@ export interface StakingProps {
   onSfx?: (name: "click" | "toggle" | "swoosh") => void;
 }
 
-type Tab = "pools" | "stake" | "nft" | "loans";
+/** the four sections of the staking screen (also listed by the home dock) */
+export type StakingTab = "pools" | "stake" | "nft" | "loans";
+type Tab = StakingTab;
 
 /* ------------------------------------------------------------------ */
 /* small pieces                                                        */

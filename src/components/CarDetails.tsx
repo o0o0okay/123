@@ -2,7 +2,7 @@ import type { ReactNode } from "react";
 import { cn } from "@/utils/cn";
 import { BRANDS, carTitle, ppOf, STAT_MAX, type Car, type CarStats } from "@/data/cars";
 import type { Lang, Strings } from "@/i18n";
-import { BumperIcon, CoinIcon, GaugeIcon, NitroIcon, PowerIcon, TireIcon } from "@/icons";
+import { BumperIcon, CoinIcon, GaugeIcon, LockIcon, NitroIcon, PowerIcon, TireIcon } from "@/icons";
 import { PaintedImg } from "./PaintContext";
 import { BrandBadge } from "./DealerBits";
 
@@ -16,6 +16,8 @@ export interface CarDetailsProps {
   /** shop price in BUY, money back in SELL */
   price: number;
   equipped?: boolean;
+  /** SELL only: the car is pledged as loan collateral and cannot be sold */
+  locked?: boolean;
   /** desktop shows the keyboard hint under the description */
   desk?: boolean;
 }
@@ -27,7 +29,7 @@ export interface CarDetailsProps {
  * the selected car can be studied without leaving the list (and without opening
  * the comparison board).
  */
-export function CarDetails({ t, lang, car, stats, mode, price, equipped, desk }: CarDetailsProps) {
+export function CarDetails({ t, lang, car, stats, mode, price, equipped, locked, desk }: CarDetailsProps) {
   const bars: { key: string; label: string; icon: ReactNode; value: number; max: number; suffix?: string; tint: string }[] = [
     {
       key: "topSpeed",
@@ -143,19 +145,37 @@ export function CarDetails({ t, lang, car, stats, mode, price, equipped, desk }:
         ))}
       </div>
 
-      {/* price */}
-      <div className="flex items-center justify-between gap-[6px] rounded-[11px] border-[3px] border-ink bg-navy-950/70 px-[8px] py-[5px]">
+      {/* price (or, for a pledged car, the reason it cannot be sold) */}
+      <div
+        data-detail-locked={locked || undefined}
+        className={cn(
+          "flex items-center justify-between gap-[6px] rounded-[11px] border-[3px] px-[8px] py-[5px]",
+          locked ? "border-[#8a5a12] bg-[#2a1f0c]/80" : "border-ink bg-navy-950/70",
+        )}
+      >
         <span className="font-body text-[9px] font-black tracking-[0.08em] text-white/45">
-          {mode === "sell" ? t.sellValueLabel : equipped ? t.equipped : t.price}
+          {locked ? t.lockedPill : mode === "sell" ? t.sellValueLabel : equipped ? t.equipped : t.price}
         </span>
         <span
-          className={cn("flex items-center gap-[4px] font-display text-[16px] leading-none", mode === "sell" ? "text-mint-400" : "text-amber-400")}
+          className={cn(
+            "flex items-center gap-[4px] font-display text-[16px] leading-none",
+            locked ? "text-amber-300" : mode === "sell" ? "text-mint-400" : "text-amber-400",
+          )}
           dir="ltr"
         >
-          <CoinIcon width={14} height={14} />
-          {price === 0 ? t.free : `${mode === "sell" ? "+" : ""}${price.toLocaleString("en-US")}`}
+          {locked ? <LockIcon width={13} height={13} /> : <CoinIcon width={14} height={14} />}
+          {locked ? t.lockedValue : price === 0 ? t.free : `${mode === "sell" ? "+" : ""}${price.toLocaleString("en-US")}`}
         </span>
       </div>
+
+      {locked && (
+        <p
+          data-detail-locked-note=""
+          className="rounded-[9px] border-[2px] border-[#8a5a12]/70 bg-[#2a1f0c]/60 px-[7px] py-[4px] font-body text-[9px] font-black leading-snug text-amber-300/90"
+        >
+          {t.lockedSellNote}
+        </p>
+      )}
 
       {/* blurb */}
       <p className="font-body text-[11px] font-bold leading-snug text-white/55">{car.desc[lang]}</p>

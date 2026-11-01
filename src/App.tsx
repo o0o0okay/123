@@ -333,6 +333,9 @@ function AppContent({
     setNftOpen(true);
   };
 
+  /** cars pledged against a loan: the dealership must not offer them for sale */
+  const collateralIds = playerState.defi.loans.flatMap((l) => l.collateral);
+
   const ownedNfts = playerState.nft.owned.map((id) => nftById(id)).filter((n): n is NonNullable<typeof n> => !!n);
 
   const buyNft = (id: string) => {
@@ -1401,6 +1404,7 @@ function AppContent({
             layout: isDesktop ? "desktop" : "mobile",
             cars,
             owned,
+            locked: collateralIds,
             activeId: activeCar.id,
             coins,
             sellValueOf,

@@ -49,6 +49,8 @@ import {
   type TokenId,
 } from "./data/staking";
 import { nftById, nftSellValue, nftStakeEarned } from "./data/nft";
+import { pushHistory, type HistoryEntry } from "./data/history";
+import type { HistoryView } from "./components/HistoryPanel";
 import {
   BackpackIcon,
   BoltIcon,
@@ -104,6 +106,8 @@ function AppContent({
   const [rightTab, setRightTab] = useState<RightTab>("garage");
   /** second level of the race panel (modes / ranks), also driven by the dock */
   const [raceTab, setRaceTab] = useState<RaceTabs>("modes");
+  /** slice of the coin ledger the history panel shows (all / income / spending) */
+  const [historyView, setHistoryView] = useState<HistoryView>("all");
   const [exitOpen, setExitOpen] = useState(false);
   const [walletModalOpen, setWalletModalOpen] = useState(false);
   const [toast, setToast] = useState<ToastData | null>(null);
@@ -212,6 +216,17 @@ function AppContent({
     toastTimer.current = window.setTimeout(() => setToast(null), 2800);
   }, []);
 
+  /**
+   * Write one line to the coin ledger.
+   *
+   * Every handler that moves coins calls this next to its own state update, so
+   * the history tab is a faithful record of what the player earned and spent —
+   * not a second calculation that could drift from the balance.
+   */
+  const log = useCallback((entry: Omit<HistoryEntry, "id" | "at">) => {
+    setPlayerState((p) => ({ ...p, history: pushHistory(p.history ?? [], entry) }));
+  }, []);
+
   useEffect(() => {
     document.documentElement.lang = lang;
     document.title = lang === "fa" ? "هیت چیس — فرار از پلیس" : "Heat Chase — Police Escape";
@@ -271,6 +286,7 @@ function AppContent({
       activeCarId: car.id,
       upgrades: { ...p.upgrades, [car.id]: p.upgrades[car.id] ?? { ...ZERO_LEVELS } },
     }));
+    log({ kind: "carBuy", coins: -car.price, detail: car.name });
     setBuyTarget(null);
     bumpTask("buy");
     showToast(fmt(t.purchased, { n: car.name }), "success");
@@ -358,6 +374,7 @@ function AppContent({
       coins: p.coins - item.price,
       nft: { ...p.nft, owned: [...p.nft.owned, id] },
     }));
+    log({ kind: "nftBuy", coins: -item.price, detail: item.name });
     showToast(fmt(t.nftBoughtToast, { n: item.name }), "success");
     return true;
   };
@@ -378,6 +395,7 @@ function AppContent({
       coins: p.coins + payout,
       nft: { ...p.nft, owned: p.nft.owned.filter((x) => x !== id) },
     }));
+    log({ kind: "nftSell", coins: payout, detail: item.name });
     showToast(fmt(t.nftSoldToast, { n: payout.toLocaleString("en-US") }), "success");
     return true;
   };
@@ -396,6 +414,7 @@ function AppContent({
         stakes: [...p.nft.stakes, { id: newId("ns"), nftId: id, startedAt: at, accruedAt: at }],
       },
     }));
+    log({ kind: "nftStake", coins: 0, detail: item.name });
     showToast(fmt(t.nftStakedToast, { n: item.name }), "success");
     return true;
   };
@@ -419,6 +438,7 @@ function AppContent({
         stakes: p.nft.stakes.map((x) => (x.id === stakeId ? { ...x, accruedAt: now() } : x)),
       },
     }));
+    log({ kind: "nftClaim", coins: reward, detail: item.name });
     showToast(fmt(t.nftClaimedToast, { n: reward.toLocaleString("en-US") }), "success");
     return true;
   };
@@ -432,6 +452,7 @@ function AppContent({
       ...p,
       nft: { ...p.nft, stakes: p.nft.stakes.filter((x) => x.id !== stakeId) },
     }));
+    log({ kind: "nftUnstake", coins: 0, detail: item.name });
     showToast(fmt(t.nftUnstakedToast, { n: item.name }), "success");
     return true;
   };
@@ -469,6 +490,7 @@ function AppContent({
           ];
       return { ...p, coins: p.coins - amount, defi: { ...p.defi, positions } };
     });
+    log({ kind: "lpAdd", coins: -amount, detail: pool ? poolName(pool) : poolId });
     showToast(fmt(t.depositedToast, { n: amount.toLocaleString("en-US") }), "success");
     return true;
   };
@@ -513,6 +535,7 @@ function AppContent({
         ],
       },
     }));
+    log({ kind: "poolCreate", coins: -amount, detail: poolName(pool) });
     showToast(fmt(t.poolCreatedToast, { n: poolName(pool) }), "success");
     return true;
   };
@@ -537,6 +560,7 @@ function AppContent({
     };
     sfx("coinJingle");
     setPlayerState((p) => ({ ...p, coins: p.coins - amount, defi: { ...p.defi, positions: [...p.defi.positions, position] } }));
+    log({ kind: "stake", coins: -amount, detail: SINGLE_POOL_NAME });
     showToast(fmt(t.stakedToast, { n: amount.toLocaleString("en-US") }), "success");
     return true;
   };
@@ -558,6 +582,7 @@ function AppContent({
         positions: p.defi.positions.map((x) => (x.id === id ? { ...x, accruedAt: now() } : x)),
       },
     }));
+    log({ kind: "stakeClaim", coins: reward, detail: position.name });
     showToast(fmt(t.claimedToast, { n: reward.toLocaleString("en-US") }), "success");
     return true;
   };
@@ -573,6 +598,7 @@ function AppContent({
       coins: p.coins + payout,
       defi: { ...p.defi, positions: p.defi.positions.filter((x) => x.id !== id) },
     }));
+    log({ kind: "stakeWithdraw", coins: payout, detail: position.name });
     showToast(fmt(t.withdrawnToast, { n: payout.toLocaleString("en-US") }), "success");
     return true;
   };
@@ -582,6 +608,7 @@ function AppContent({
     const loan: Loan = { id: newId("ln"), principal: amount, apr: LOAN_APR, borrowedAt: now(), collateral };
     sfx("coinJingle");
     setPlayerState((p) => ({ ...p, coins: p.coins + amount, defi: { ...p.defi, loans: [...p.defi.loans, loan] } }));
+    log({ kind: "borrow", coins: amount, detail: collateral.map((id) => cars.find((c) => c.id === id)?.name ?? id).join(" · ") });
     showToast(fmt(t.borrowedToast, { n: amount.toLocaleString("en-US") }), "success");
     return true;
   };
@@ -601,6 +628,7 @@ function AppContent({
       coins: p.coins - cost,
       defi: { ...p.defi, loans: p.defi.loans.filter((l) => l.id !== id) },
     }));
+    log({ kind: "repay", coins: -cost });
     showToast(fmt(t.repaidToast, { n: cost.toLocaleString("en-US") }), "success");
     return true;
   };
@@ -625,6 +653,7 @@ function AppContent({
       },
     }));
     const names = fresh.map((id) => cars.find((c) => c.id === id)?.name ?? id).join(" · ");
+    log({ kind: "pledge", coins: 0, detail: names });
     showToast(fmt(t.pledgedToast, { n: names }), "success");
     return true;
   };
@@ -657,6 +686,7 @@ function AppContent({
         loans: p.defi.loans.map((l) => (l.id === loanId ? { ...l, collateral: remaining } : l)),
       },
     }));
+    log({ kind: "release", coins: 0, detail: car.name });
     showToast(fmt(t.releasedToast, { n: car.name }), "success");
     return true;
   };
@@ -680,6 +710,7 @@ function AppContent({
       amount: pack.coins,
       targetId: isDesktop ? "desktop-top-coin-badge" : "mobile-top-coin-badge",
     });
+    log({ kind: "coins", coins: pack.coins });
     showToast(fmt(t.packPurchased, { n: pack.coins.toLocaleString("en-US") }), "success");
   };
 
@@ -726,6 +757,7 @@ function AppContent({
         paints,
       };
     });
+    log({ kind: "carSell", coins: value, detail: car.name });
     setSellTarget(null);
     showToast(fmt(t.soldToast, { n: car.name, p: value.toLocaleString("en-US") }), "success");
   };
@@ -750,6 +782,7 @@ function AppContent({
         upgrades: { ...p.upgrades, [carId]: { ...lv, [key]: Math.min(MAX_LEVEL, lv[key] + 1) } },
       };
     });
+    log({ kind: "upgrade", coins: -cost, detail: `${activeCar.name} · ${t[UPG_NAME[key]]}` });
     bumpTask("upgrade");
     showToast(fmt(t.upgraded, { p: t[UPG_NAME[key]], l: level + 1 }), "success");
   };
@@ -775,6 +808,7 @@ function AppContent({
       coins: p.coins - paint.price,
       paints: { ...p.paints, [activeCar.id]: paint.id },
     }));
+    log({ kind: "paint", coins: -paint.price, detail: paint.name[lang] });
     showToast(fmt(t.painted, { c: paint.name[lang], p: paint.price.toLocaleString("en-US") }), "success");
   };
 
@@ -793,6 +827,7 @@ function AppContent({
     });
 
     setPlayerState((p) => ({ ...p, coins: p.coins + gained, runReward: 0 }));
+    log({ kind: "chase", coins: gained });
     bumpTask("collect");
     showToast(fmt(t.rewardCollected, { n: gained.toLocaleString("en-US") }), "success");
   };
@@ -820,6 +855,7 @@ function AppContent({
       coins: p.coins + def.reward,
       tasksClaimed: [...p.tasksClaimed, id],
     }));
+    log({ kind: "task", coins: def.reward, detail: def.title[lang] });
     showToast(fmt(t.claimedToast, { n: def.reward.toLocaleString("en-US") }), "success");
   };
 
@@ -847,6 +883,7 @@ function AppContent({
       daily: claimDaily(p.daily ?? DEFAULT_DAILY, new Date()),
     }));
     setClock(Date.now());
+    log({ kind: "daily", coins: daily.reward });
     showToast(fmt(t.dailyClaimedToast, { n: daily.reward.toLocaleString("en-US") }), "success");
     if (nextStreak % 7 === 0) showToast(fmt(t.dailyStreakToast, { n: nextStreak }), "success");
   };
@@ -978,6 +1015,7 @@ function AppContent({
         chase: mode.id === "pursuit" ? (p.taskProgress.chase ?? 0) + 1 : p.taskProgress.chase ?? 0,
       },
     }));
+    log({ kind: "raceEntry", coins: -mode.fee, detail: mode.title[lang] });
     setRaceResult(null);
     setRaceBest(false);
     setRaceMode(mode);
@@ -1024,6 +1062,7 @@ function AppContent({
     } else {
       sfx("click");
     }
+    log({ kind: "racePrize", coins: reward, points: raceResult.points, detail: raceMode.title[lang] });
     showToast(
       raceResult.won
         ? fmt(t.raceWon, { r: raceMode.title[lang], n: reward.toLocaleString("en-US") })
@@ -1150,6 +1189,7 @@ function AppContent({
 
   const garage: GarageData = {
     car: activeCar,
+    history: playerState.history,
     lang,
     levels: activeLevels,
     coins,
@@ -1413,6 +1453,8 @@ function AppContent({
           }}
           raceTab={raceTab}
           onRaceTab={setRaceTab}
+          historyView={historyView}
+          onHistoryView={setHistoryView}
         />
       ) : screen === "home" && player ? (
         <WelcomeScreen

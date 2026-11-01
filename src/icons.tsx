@@ -558,6 +558,19 @@ export const HomeIcon = (p: P) => (
   </Svg>
 );
 
+/**
+ * History: a clock dial with a rewind arrowhead inside its top-left quarter.
+ * The dial is a circle of radius 8.4 around (12, 12), so the ink box is a clean
+ * 19.4-unit square — the dock sizes the glyph from that box, like all others.
+ */
+export const HistoryIcon = (p: P) => (
+  <Stroke {...p} strokeWidth={2.6}>
+    <circle cx="12" cy="12" r="8.4" />
+    <path d="M6.9 4.7 6.2 8.3l3.6-.6" />
+    <path d="M12 7.4V12l3.1 2" />
+  </Stroke>
+);
+
 /** Thin chevron pointing to the right (flip with rtl / scale-x). */
 export const ChevronIcon = (p: P) => (
   <Stroke {...p} strokeWidth={3.2}>

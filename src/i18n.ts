@@ -285,6 +285,26 @@ const en = {
   nftClaimedToast: "+{n} coins from your NFT",
   nftUnstakedToast: "{n} left the vault",
 
+  /* ---------- history ledger ---------- */
+  historyTitle: "HISTORY",
+  historySub: "Every coin in and out",
+  historyAll: "ALL",
+  historyIn: "INCOME",
+  historyOut: "SPENDING",
+  historyEmpty: "Nothing here yet",
+  historyEmptyHint: "Win a race, buy a car or pledge one against a loan and it lands here.",
+  historyEarned: "EARNED",
+  historySpent: "SPENT",
+  historyNet: "NET",
+  historyPoints: "PTS",
+  historyToday: "TODAY",
+  historyYesterday: "YESTERDAY",
+  historyEarlier: "EARLIER",
+  historyEvents: "{n} events",
+  historyNoMatch: "No events match this filter",
+  minShort: "{n}m",
+  nowShort: "NOW",
+
   /* ---------- leaderboard ---------- */
   boardTab: "RANKS",
   raceTab: "RACES",
@@ -760,6 +780,26 @@ const fa: Strings = {
   emptyPool: "اولین تأمین‌کننده باش",
   lifetime: "کل",
   lockLabel: "قفل",
+
+  /* ---------- history ledger ---------- */
+  historyTitle: "تاریخچه",
+  historySub: "هر سکه‌ای که آمد و رفت",
+  historyAll: "همه",
+  historyIn: "دریافتی",
+  historyOut: "پرداختی",
+  historyEmpty: "هنوز چیزی ثبت نشده",
+  historyEmptyHint: "یک مسابقه ببر، ماشین بخر یا وثیقه بگذار تا اینجا ثبت شود.",
+  historyEarned: "دریافتی",
+  historySpent: "پرداختی",
+  historyNet: "خالص",
+  historyPoints: "امتیاز",
+  historyToday: "امروز",
+  historyYesterday: "دیروز",
+  historyEarlier: "پیش‌تر",
+  historyEvents: "{n} رویداد",
+  historyNoMatch: "رویدادی با این فیلتر نیست",
+  minShort: "{n}د",
+  nowShort: "الان",
 
   /* ---------- leaderboard ---------- */
   boardTab: "رتبه‌ها",

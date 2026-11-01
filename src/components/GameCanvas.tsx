@@ -53,6 +53,9 @@ export function GameCanvas({
       )}
 
       <div
+        // the stage is the scaled play area: overlays portal into it so their
+        // `fixed` boxes cover the stage (and stay centred) instead of some panel
+        data-game-stage=""
         dir={lang === "fa" ? "rtl" : "ltr"}
         className={cn(
           "relative shrink-0 select-none",

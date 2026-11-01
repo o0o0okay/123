@@ -932,6 +932,18 @@ function AppContent({
     setDraftSettings(settings);
   };
 
+  /** left dock: copy the driver's referral link */
+  const shareInvite = () => {
+    const ref = String(player?.id ?? "GUEST");
+    sfx("coinJingle");
+    try {
+      void navigator.clipboard?.writeText(`https://heatchase.game/join/${ref}`);
+    } catch {
+      /* clipboard blocked: the toast still shows the code */
+    }
+    showToast(fmt(t.inviteCopied, { n: ref }), "success");
+  };
+
   const saveOptions = () => {
     if (draftSettings) {
       setSettings(draftSettings);
@@ -1380,6 +1392,7 @@ function AppContent({
           onDemoConnect={handleDemoWallet}
           onOpenWalletModal={() => setWalletModalOpen(true)}
           onOptions={openOptions}
+          onInvite={shareInvite}
           onExit={() => {
             sfx("click");
             setExitOpen(true);

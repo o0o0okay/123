@@ -32,6 +32,7 @@ import { simulateRace, type RaceMode, type RaceResult } from "./data/races";
 import { ME_ID, type BoardEntry } from "./data/leaderboard";
 import {
   LOAN_APR,
+  LTV,
   SINGLE_POOL_ID,
   SINGLE_POOL_NAME,
   aprForFee,
@@ -597,6 +598,62 @@ function AppContent({
       defi: { ...p.defi, loans: p.defi.loans.filter((l) => l.id !== id) },
     }));
     showToast(fmt(t.repaidToast, { n: cost.toLocaleString("en-US") }), "success");
+    return true;
+  };
+
+  /** value of a set of owned cars, the number the LTV is measured against */
+  const valueOfIds = (ids: string[]) =>
+    ownedCars.filter((c) => ids.includes(c.id)).reduce((sum, c) => sum + sellValueOf(c), 0);
+
+  /** add one (or more) free cars to an existing loan */
+  const addCollateral = (loanId: string, carIds: string[]) => {
+    const loan = playerState.defi.loans.find((l) => l.id === loanId);
+    if (!loan) return false;
+    const used = new Set(playerState.defi.loans.flatMap((l) => l.collateral));
+    const fresh = carIds.filter((id) => owned.includes(id) && !used.has(id));
+    if (!fresh.length) return false;
+    sfx("coinJingle");
+    setPlayerState((p) => ({
+      ...p,
+      defi: {
+        ...p.defi,
+        loans: p.defi.loans.map((l) => (l.id === loanId ? { ...l, collateral: [...l.collateral, ...fresh] } : l)),
+      },
+    }));
+    const names = fresh.map((id) => cars.find((c) => c.id === id)?.name ?? id).join(" · ");
+    showToast(fmt(t.pledgedToast, { n: names }), "success");
+    return true;
+  };
+
+  /**
+   * Free a single pledged car.
+   *
+   * The loan has to stay covered at the LTV after the car leaves, otherwise it
+   * would be under-collateralised; in that case the player is told how much of
+   * the debt has to go first.
+   */
+  const releaseCollateral = (loanId: string, carId: string) => {
+    const loan = playerState.defi.loans.find((l) => l.id === loanId);
+    if (!loan || !loan.collateral.includes(carId)) return false;
+    const car = cars.find((c) => c.id === carId);
+    if (!car) return false;
+    const remaining = loan.collateral.filter((id) => id !== carId);
+    const after = valueOfIds(remaining) * LTV;
+    const debt = debtOf(loan, now());
+    if (debt > after) {
+      sfx("error");
+      showToast(fmt(t.releaseBlocked, { n: Math.ceil(debt - after).toLocaleString("en-US") }), "error");
+      return false;
+    }
+    sfx("swoosh");
+    setPlayerState((p) => ({
+      ...p,
+      defi: {
+        ...p.defi,
+        loans: p.defi.loans.map((l) => (l.id === loanId ? { ...l, collateral: remaining } : l)),
+      },
+    }));
+    showToast(fmt(t.releasedToast, { n: car.name }), "success");
     return true;
   };
 
@@ -1461,6 +1518,8 @@ function AppContent({
             onWithdraw: withdrawPosition,
             onBorrow: borrow,
             onRepay: repayLoan,
+            onAddCollateral: addCollateral,
+            onReleaseCollateral: releaseCollateral,
             nfts: ownedNfts,
             nftStakes: playerState.nft.stakes,
             onStakeNft: stakeNft,

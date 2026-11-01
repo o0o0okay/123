@@ -128,7 +128,7 @@ export function WelcomeScreen({
             onClaimDaily={onClaimDaily}
           />
         )}
-        {tab === "news" && <NewsPanel items={t.news} title={t.tabNews} />}
+        {tab === "news" && <NewsPanel items={t.news} title={t.tabNews} closeLabel={t.close} moreLabel={t.details} />}
       </main>
 
       <section className="shrink-0 space-y-[8px] pt-[2px]">

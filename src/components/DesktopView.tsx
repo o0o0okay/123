@@ -614,7 +614,7 @@ export function DesktopView(p: DesktopViewProps) {
           </div>
 
           {p.rightTab === "news" ? (
-            <NewsPanel items={t.news} title={t.tabNews} className="inset-x-0 bottom-0 top-[26px]" />
+            <NewsPanel items={t.news} title={t.tabNews} className="inset-x-0 bottom-0 top-[26px]" closeLabel={t.close} moreLabel={t.details} />
           ) : (
             <div
               key={p.rightTab}

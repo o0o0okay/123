@@ -193,11 +193,9 @@ export function CoinText({ value, signed = false }: { value: number; signed?: bo
     <bdi
       data-coin={value > 0 ? "in" : value < 0 ? "out" : "none"}
       dir="ltr"
-      className={cn(
-        "font-display tracking-wide",
-        value > 0 && "text-mint-400",
-        value < 0 && "text-flame-400",
-      )}
+      className="font-display tracking-wide"
+      // inline, so the colour can never be lost to a missing theme token
+      style={value === 0 ? undefined : { color: value > 0 ? "#46f0a0" : "#ff5a5a" }}
     >
       {text}
     </bdi>

@@ -14,6 +14,7 @@ import {
   GaugeIcon,
   InfoIcon,
   KeyIcon,
+  LockIcon,
   NitroIcon,
   CompareIcon,
   SearchIcon,
@@ -368,6 +369,8 @@ export interface DealershipProps {
   layout: "mobile" | "desktop";
   cars: Car[];
   owned: string[];
+  /** owned cars pledged as loan collateral: they cannot be sold */
+  locked?: string[];
   activeId: string;
   coins: number;
   sellValueOf: (car: Car) => number;
@@ -386,6 +389,7 @@ export function Dealership({
   layout,
   cars,
   owned,
+  locked = [],
   activeId,
   coins,
   sellValueOf,
@@ -431,6 +435,7 @@ export function Dealership({
     setMinPriceRaw((m) => Math.min(m, v));
   };
 
+  const lockedSet = useMemo(() => new Set(locked), [locked]);
   const animatedCoins = useAnimatedNumber(coins);
   const { isPulsing } = useCoinFly();
   const click = () => onSfx?.("click");
@@ -578,6 +583,7 @@ export function Dealership({
   const primary = (car: Car) => {
     const isOwned = owned.includes(car.id);
     if (mode === "sell") {
+      // onSell() carries the guard too; the tile stays inert for pledged cars
       if (isOwned) onSell(car);
       return;
     }
@@ -807,6 +813,18 @@ export function Dealership({
     );
     if (mode === "sell") {
       if (!isOwned) return null;
+      // pledged cars cannot be sold: say so here instead of failing after a tap
+      if (lockedSet.has(car.id))
+        return (
+          <span
+            data-locked-action=""
+            title={t.lockedSellNote}
+            className={cn(base, "cursor-not-allowed bg-navy-900 text-amber-300/80")}
+          >
+            <LockIcon width={16} height={16} />
+            {t.lockedPill}
+          </span>
+        );
       if (owned.length <= 1) return <span className={cn(base, "bg-navy-900 text-white/35")}>{t.lastCar}</span>;
       return (
         <button
@@ -844,12 +862,13 @@ export function Dealership({
   };
 
   const renderCard = (car: Car) => {
-    const isOwned = owned.includes(car.id);
     const isSel = selected?.id === car.id;
     const inCompare = compareIds.includes(car.id);
     const price = mode === "sell" ? sellValueOf(car) : car.price;
+    // a car pledged for a loan stays visible in the garage list, but it is not for sale
+    const isLocked = mode === "sell" && lockedSet.has(car.id);
     const priceClass =
-      mode === "sell" ? "text-mint-400" : coins >= car.price ? "text-amber-400" : "text-[#ff8a6a]";
+      mode === "sell" ? (isLocked ? "text-amber-300/80" : "text-mint-400") : coins >= car.price ? "text-amber-400" : "text-[#ff8a6a]";
     return (
       // every tile is exactly the same size: a fixed card + a one-line name plate
       <div key={car.id} className="flex min-w-0 flex-col">
@@ -857,6 +876,7 @@ export function Dealership({
           type="button"
           data-car-tile={car.id}
           data-selected={isSel || undefined}
+          data-locked={isLocked ? "1" : undefined}
           onClick={() => select(car)}
           onDoubleClick={() => primary(car)}
           aria-label={carTitle(car)}
@@ -869,13 +889,23 @@ export function Dealership({
               ? "-translate-y-[2px] border-skyg-300 bg-[#2b4f93]/90 shadow-[0_0_0_3px_rgba(111,193,255,0.35),0_6px_0_#060a28]"
               : inCompare
                 ? "border-skyg-400/80 bg-[#243a72]/85 shadow-[0_0_0_2px_rgba(111,193,255,0.25),0_4px_0_#060a28]"
-                : "border-ink bg-navy-800/75 shadow-[0_4px_0_#060a28] hover:-translate-y-[1px] hover:bg-navy-700/85",
+                : isLocked
+                  ? "border-[#8a5a12] bg-navy-800/60 shadow-[0_4px_0_#060a28]"
+                  : "border-ink bg-navy-800/75 shadow-[0_4px_0_#060a28] hover:-translate-y-[1px] hover:bg-navy-700/85",
           )}
         >
-          {/* SELL lists the garage, so only the car in use needs a label */}
-          {mode === "sell" && isOwned && car.id === activeId && (
-            <span className="absolute -top-[10px] left-1/2 z-10 -translate-x-1/2 whitespace-nowrap rounded-full border-[2px] border-ink bg-skyg-300 px-[7px] font-body text-[9px] font-black leading-[15px] text-ink">
-              {t.equipped}
+          {/* SELL lists the garage: a collateral car outranks the "in use" label,
+              and both sit inside the tile so they can never cover a neighbour */}
+          {mode === "sell" && (isLocked || car.id === activeId) && (
+            <span
+              data-card-badge={isLocked ? "locked" : "equipped"}
+              className={cn(
+                "absolute left-1/2 top-[3px] z-10 flex -translate-x-1/2 items-center gap-[3px] whitespace-nowrap rounded-full border-[2px] border-ink px-[7px] font-body text-[9px] font-black leading-[15px]",
+                isLocked ? "bg-amber-400 text-ink" : "bg-skyg-300 text-ink",
+              )}
+            >
+              {isLocked && <LockIcon width={8} height={8} />}
+              {isLocked ? t.lockedPill : t.equipped}
             </span>
           )}
           <div
@@ -906,8 +936,17 @@ export function Dealership({
             )}
             dir="ltr"
           >
-            <CoinIcon width={15} height={15} />
-            {mode === "sell" ? `+${price.toLocaleString("en-US")}` : price === 0 ? t.free : price.toLocaleString("en-US")}
+            {isLocked ? (
+              <>
+                <LockIcon width={13} height={13} />
+                {t.lockedValue}
+              </>
+            ) : (
+              <>
+                <CoinIcon width={15} height={15} />
+                {mode === "sell" ? `+${price.toLocaleString("en-US")}` : price === 0 ? t.free : price.toLocaleString("en-US")}
+              </>
+            )}
           </div>
           <div
             className="mt-[3px] flex h-[14px] shrink-0 items-center justify-center font-display text-[13px] leading-none tracking-wide text-white/85"
@@ -968,6 +1007,7 @@ export function Dealership({
       mode={mode}
       price={mode === "sell" ? sellValueOf(car) : car.price}
       equipped={car.id === activeId}
+      locked={mode === "sell" && lockedSet.has(car.id)}
       desk={desk}
     />
   );

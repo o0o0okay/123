@@ -24,7 +24,8 @@ export function BuyConfirmModal({
   const after = coins - car.price;
   const rows: [string, string, string][] = [
     [t.balance, coins.toLocaleString("en-US"), "text-white"],
-    [t.price, `-${car.price.toLocaleString("en-US")}`, "text-[#ff6b4a]"],
+    // the purchase row is the money leaving the wallet: same red as the ledger
+    [t.price, `−${car.price.toLocaleString("en-US")}`, "text-flame-400"],
     [t.balanceAfter, after.toLocaleString("en-US"), "text-amber-400"],
   ];
 

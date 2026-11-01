@@ -20,6 +20,18 @@ import {
   WalletIcon,
 } from "@/icons";
 
+/**
+ * The two colours of money, written as plain values.
+ *
+ * They are applied through `style` rather than a utility class: the amount is
+ * the whole point of the ledger, so it must not depend on a theme token being
+ * present in the stylesheet the browser ends up with (a stale or partial CSS
+ * bundle silently drops `text-flame-400` and the figure falls back to text
+ * colour — which is exactly how the losses looked before).
+ */
+export const GAIN = "#46f0a0";
+export const LOSS = "#ff5a5a";
+
 /** which slices of the ledger the panel can show */
 export type HistoryView = "all" | "in" | "out";
 
@@ -111,19 +123,21 @@ export function HistoryPanel({ t, lang, history, view, onView, className }: Hist
       <div className="flex shrink-0 items-stretch gap-[6px]">
         <div className="flex flex-1 flex-col items-center rounded-[12px] border-[3px] border-ink bg-gradient-to-b from-navy-800 to-navy-900 px-[6px] py-[5px] shadow-[0_3px_0_#060a28]">
           <span className="font-body text-[8px] font-black tracking-[0.1em] text-mint-400/80">{t.historyEarned}</span>
-          <span className="font-display text-[13px] leading-tight text-mint-400">{num(withSign(totals.inCoins, "+"))}</span>
+          <span className="font-display text-[13px] leading-tight" style={{ color: GAIN }}>
+            {num(withSign(totals.inCoins, "+"))}
+          </span>
         </div>
         <div className="flex flex-1 flex-col items-center rounded-[12px] border-[3px] border-ink bg-gradient-to-b from-navy-800 to-navy-900 px-[6px] py-[5px] shadow-[0_3px_0_#060a28]">
           <span className="font-body text-[8px] font-black tracking-[0.1em] text-flame-400/80">{t.historySpent}</span>
-          <span className="font-display text-[13px] leading-tight text-flame-400">{num(withSign(totals.outCoins, "−"))}</span>
+          <span className="font-display text-[13px] leading-tight" style={{ color: LOSS }}>
+            {num(withSign(totals.outCoins, "−"))}
+          </span>
         </div>
         <div className="flex flex-1 flex-col items-center rounded-[12px] border-[3px] border-ink bg-gradient-to-b from-navy-800 to-navy-900 px-[6px] py-[5px] shadow-[0_3px_0_#060a28]">
           <span className="font-body text-[8px] font-black tracking-[0.1em] text-white/45">{t.historyNet}</span>
           <span
-            className={cn(
-              "font-display text-[13px] leading-tight",
-              totals.net > 0 ? "text-mint-400" : totals.net < 0 ? "text-flame-400" : "text-white/60",
-            )}
+            className={cn("font-display text-[13px] leading-tight", totals.net === 0 && "text-white/60")}
+            style={totals.net === 0 ? undefined : { color: totals.net > 0 ? GAIN : LOSS }}
           >
             {num(signed(totals.net))}
           </span>
@@ -198,12 +212,15 @@ export function HistoryPanel({ t, lang, history, view, onView, className }: Hist
                   <span className="flex shrink-0 flex-col items-end leading-none">
                     <span
                       data-coins-dir={e.coins > 0 ? "in" : e.coins < 0 ? "out" : "none"}
-                      className={cn(
-                        "font-display text-[12px] tracking-wide",
-                        e.coins > 0 && "text-mint-400 drop-shadow-[0_0_6px_rgba(70,240,160,0.35)]",
-                        e.coins < 0 && "text-flame-400 drop-shadow-[0_0_6px_rgba(255,90,90,0.35)]",
-                        e.coins === 0 && "text-white/45",
-                      )}
+                      className={cn("font-display text-[13px] tracking-wide", e.coins === 0 && "text-white/45")}
+                      style={
+                        e.coins === 0
+                          ? undefined
+                          : {
+                              color: e.coins > 0 ? GAIN : LOSS,
+                              textShadow: `0 0 7px ${e.coins > 0 ? "rgba(70,240,160,0.4)" : "rgba(255,90,90,0.4)"}`,
+                            }
+                      }
                     >
                       {e.coins === 0 ? "—" : num(signed(e.coins))}
                     </span>

@@ -191,7 +191,8 @@ export function RaceOverlay({ t, lang, mode, car, result, best, onCollect, onAga
           <div className="mt-[12px] flex items-center justify-between rounded-[16px] border-[3px] border-ink bg-gradient-to-r from-[#ffd23a] to-[#ff9a1f] px-[14px] py-[8px] shadow-[0_4px_0_#b96a08]">
             <span className="font-display text-[16px] text-ink">{t.prize}</span>
             <span className="flex items-center gap-[6px] font-display text-[28px] leading-none text-ink">
-              <CoinIcon width={26} height={26} />+{result.reward.toLocaleString("en-US")}
+              <CoinIcon width={26} height={26} />
+              <bdi dir="ltr">+{result.reward.toLocaleString("en-US")}</bdi>
             </span>
           </div>
 

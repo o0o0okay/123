@@ -181,10 +181,48 @@ export function LoadingOverlay({ t, car, onDone }: { t: Strings; car: Car; onDon
 /* ------------------------------------------------------------------ */
 
 export type ToastType = "info" | "success" | "error";
+
+/**
+ * Colour a coin figure inside a message: `{-1200}` is red, `{+240}` is green,
+ * `{2400}` keeps the message colour. The sign decides, so a spend and a gain
+ * read the same everywhere in the game.
+ */
+export function CoinText({ value, signed = false }: { value: number; signed?: boolean }) {
+  const text = `${signed ? (value > 0 ? "+" : value < 0 ? "−" : "") : ""}${Math.abs(value).toLocaleString("en-US")}`;
+  return (
+    <bdi
+      data-coin={value > 0 ? "in" : value < 0 ? "out" : "none"}
+      dir="ltr"
+      className={cn(
+        "font-display tracking-wide",
+        value > 0 && "text-mint-400",
+        value < 0 && "text-flame-400",
+      )}
+    >
+      {text}
+    </bdi>
+  );
+}
+
+/** split a message around {coin:N} markers so figures can be coloured */
+export function RichMessage({ text }: { text: string }) {
+  const parts = text.split(/(\{coin:[+-]?\d+\})/g);
+  return (
+    <>
+      {parts.map((part, i) => {
+        const m = /^\{coin:([+-]?\d+)\}$/.exec(part);
+        if (!m) return <span key={i}>{part}</span>;
+        return <CoinText key={i} value={Number(m[1])} signed />;
+      })}
+    </>
+  );
+}
 export interface ToastData {
   id: number;
   message: string;
   type: ToastType;
+  /** render {coin:N} markers in the message as coloured figures */
+  rich?: boolean;
 }
 
 export function Toast({ toast, className }: { toast: ToastData | null; className?: string }) {
@@ -212,7 +250,7 @@ export function Toast({ toast, className }: { toast: ToastData | null; className
         >
           <Icon width={16} height={16} />
         </span>
-        <span>{toast.message}</span>
+        <span>{toast.rich ? <RichMessage text={toast.message} /> : toast.message}</span>
       </div>
     </div>
   );

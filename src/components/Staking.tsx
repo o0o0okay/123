@@ -64,6 +64,10 @@ export interface StakingProps {
   onWithdraw: (positionId: string) => boolean;
   onBorrow: (amount: number, collateral: string[]) => boolean;
   onRepay: (loanId: string) => boolean;
+  /** pledge extra cars on an existing loan */
+  onAddCollateral: (loanId: string, carIds: string[]) => boolean;
+  /** free one pledged car; the caller refuses when the loan would go uncovered */
+  onReleaseCollateral: (loanId: string, carId: string) => boolean;
   /** car tokens the player owns (already resolved from ids) */
   nfts: NftItem[];
   /** tokens currently locked in the vault */
@@ -551,6 +555,8 @@ function LoanCard({
   now,
   coins,
   onRepay,
+  onRelease,
+  onPledge,
 }: {
   t: Strings;
   loan: Loan;
@@ -559,6 +565,10 @@ function LoanCard({
   now: number;
   coins: number;
   onRepay: (id: string) => void;
+  /** free one pledged car (blocked while it would under-collateralise the loan) */
+  onRelease: (loanId: string, carId: string) => void;
+  /** open the "pledge another car" sheet for this loan */
+  onPledge: (loanId: string) => void;
 }) {
   const debt = debtOf(loan, now);
   const interest = interestOf(loan, now);
@@ -595,21 +605,59 @@ function LoanCard({
         </span>
       </div>
 
-      <div className="mt-[8px] flex items-center justify-between gap-[8px]">
-        <div className="flex min-w-0 items-center gap-[4px]">
-          {cars.map((car) => (
-            <span
+      {/* pledged cars, one row each: every car can leave on its own */}
+      <div className="mt-[9px] flex items-center justify-between gap-[6px]">
+        <span className="font-body text-[9px] font-black uppercase tracking-[0.12em] text-white/35">{t.collateralCars}</span>
+        <span className="flex items-center gap-[3px] font-display text-[11px] leading-none text-amber-400/90" dir="ltr">
+          <Coin size={10} />
+          {collateralValue.toLocaleString("en-US")}
+        </span>
+      </div>
+
+      <div data-collateral-list={loan.id} className="mt-[5px] space-y-[5px]">
+        {cars.map((car) => {
+          const value = valueOf(car);
+          const after = collateralValue - value;
+          // the loan must stay covered by what is left once this car leaves
+          const need = Math.ceil(Math.max(0, debt - after * LTV));
+          const blocked = need > 0;
+          return (
+            <div
               key={car.id}
-              title={car.name}
-              className="relative flex h-[24px] w-[32px] shrink-0 items-center justify-center overflow-hidden rounded-[6px] border-[2px] border-[#232a31] bg-[#0b0f12]"
+              data-collateral-row={car.id}
+              data-blocked={blocked ? "1" : undefined}
+              className="flex items-center gap-[7px] rounded-[11px] border-[2px] border-[#232a31] bg-[#0f1418] px-[7px] py-[5px]"
             >
-              <PaintedImg carId={car.id} src={car.image} alt="" className="max-h-[92%] max-w-[94%] object-contain" />
-            </span>
-          ))}
-          <span className="ms-[2px] truncate font-body text-[9px] font-black text-white/40">
-            {t.collateralValue}: {collateralValue.toLocaleString("en-US")}
-          </span>
-        </div>
+              <span className="relative flex h-[26px] w-[36px] shrink-0 items-center justify-center overflow-hidden rounded-[6px] bg-[#0b0f12]">
+                <PaintedImg carId={car.id} src={car.image} alt="" className="max-h-[92%] max-w-[94%] object-contain" />
+              </span>
+              <span className="min-w-0 flex-1">
+                <span className="block truncate font-display text-[11px] leading-none text-white">{car.name}</span>
+                <span className="mt-[2px] flex items-center gap-[3px] font-display text-[10px] leading-none text-amber-400/85" dir="ltr">
+                  <Coin size={9} />
+                  {value.toLocaleString("en-US")}
+                </span>
+              </span>
+              <ActionButton
+                kind={blocked ? "plain" : "ghost"}
+                disabled={blocked}
+                onClick={() => onRelease(loan.id, car.id)}
+                data-release={car.id}
+                title={blocked ? fmt(t.releaseBlocked, { n: need.toLocaleString("en-US") }) : t.releaseCollateral}
+              >
+                <UndoIcon width={10} height={10} />
+                {t.releaseCollateral}
+              </ActionButton>
+            </div>
+          );
+        })}
+      </div>
+
+      <div className="mt-[8px] flex items-center justify-between gap-[8px]">
+        <ActionButton kind="ghost" onClick={() => onPledge(loan.id)} data-pledge-more={loan.id}>
+          <PlusIcon width={12} height={12} />
+          {t.pledgeMore}
+        </ActionButton>
         <ActionButton
           kind={coins >= debt ? "primary" : "ghost"}
           disabled={coins < debt}
@@ -712,6 +760,8 @@ export function Staking({
   onWithdraw,
   onBorrow,
   onRepay,
+  onAddCollateral,
+  onReleaseCollateral,
   nfts,
   nftStakes,
   onStakeNft,
@@ -743,6 +793,8 @@ export function Staking({
   // loan form
   const [borrowAmount, setBorrowAmount] = useState(0);
   const [picked, setPicked] = useState<string[]>([]);
+  /** the loan that is getting another car pledged right now */
+  const [pledgeTo, setPledgeTo] = useState<string | null>(null);
 
   const click = () => onSfx?.("click");
   /** the tick drives re-renders, but lock/earnings maths must not lag behind the clock */
@@ -767,6 +819,8 @@ export function Staking({
   const debt = loans.reduce((s, l) => s + debtOf(l, liveNow), 0);
   const usedCollateral = useMemo(() => new Set(loans.flatMap((l) => l.collateral)), [loans]);
   const lockedCars = ownedCars.filter((c) => usedCollateral.has(c.id));
+  /** owned cars that no loan is holding: the only ones that can be pledged */
+  const freeCars = ownedCars.filter((c) => !usedCollateral.has(c.id));
   const lockedValue = lockedCars.reduce((s, c) => s + sellValueOf(c), 0);
   const pickedValue = ownedCars
     .filter((c) => picked.includes(c.id) && !usedCollateral.has(c.id))
@@ -1069,6 +1123,9 @@ export function Staking({
             }}
             desk={desk}
           />
+          <div data-pledge-hint="" className="mt-[5px] font-body text-[8.5px] font-black leading-snug tracking-wide text-white/30">
+            {t.pledgeHint}
+          </div>
         </div>
 
         <div className="mt-[10px] grid grid-cols-3 gap-[6px]">
@@ -1136,6 +1193,14 @@ export function Staking({
               coins={coins}
               onRepay={(id) => {
                 if (onRepay(id)) setError(null);
+              }}
+              onRelease={(loanId, carId) => {
+                if (onReleaseCollateral(loanId, carId)) setError(null);
+              }}
+              onPledge={(loanId) => {
+                click();
+                setError(null);
+                setPledgeTo(loanId);
               }}
             />
           ))}
@@ -1376,6 +1441,53 @@ export function Staking({
           {tab === "loans" && loansBody}
         </div>
       </div>
+
+      {/* pledge one more car on an existing loan */}
+      {pledgeTo && (() => {
+        return (
+          <Sheet title={t.pledgeMore} onClose={() => setPledgeTo(null)}>
+            <div className="font-body text-[9px] font-black uppercase tracking-[0.12em] text-white/35">{t.collateral}</div>
+            <div className="mt-[5px] space-y-[5px]" data-pledge-list="">
+              {freeCars.length === 0 ? (
+                <div data-pledge-empty="" className="rounded-[12px] border-[2px] border-dashed border-[#232a31] px-[12px] py-[16px] text-center font-body text-[10px] font-black text-white/35">
+                  {t.noFreeCars}
+                </div>
+              ) : (
+                freeCars.map((car) => (
+                  <div key={car.id} className="flex items-center gap-[7px] rounded-[12px] border-[2px] border-[#232a31] bg-[#10151a] px-[8px] py-[6px]">
+                    <span className="relative flex h-[26px] w-[36px] shrink-0 items-center justify-center overflow-hidden rounded-[6px] bg-[#0b0f12]">
+                      <PaintedImg carId={car.id} src={car.image} alt="" className="max-h-[92%] max-w-[94%] object-contain" />
+                    </span>
+                    <span className="min-w-0 flex-1">
+                      <span className="block truncate font-display text-[12px] leading-none text-white">{car.name}</span>
+                      <span className="mt-[2px] flex items-center gap-[3px] font-display text-[10px] leading-none text-amber-400" dir="ltr">
+                        <Coin size={9} />
+                        {sellValueOf(car).toLocaleString("en-US")}
+                      </span>
+                    </span>
+                    <ActionButton
+                      kind="primary"
+                      onClick={() => {
+                        if (onAddCollateral(pledgeTo, [car.id])) setError(null);
+                        setPledgeTo(null);
+                      }}
+                      data-pledge={car.id}
+                    >
+                      <PlusIcon width={11} height={11} />
+                      {t.pledgeCollateral}
+                    </ActionButton>
+                  </div>
+                ))
+              )}
+            </div>
+            <div className="mt-[12px] flex gap-[7px]">
+              <ActionButton kind="plain" className="flex-1 py-[9px]" onClick={() => setPledgeTo(null)}>
+                {t.cancel}
+              </ActionButton>
+            </div>
+          </Sheet>
+        );
+      })()}
 
       {/* add liquidity dialog */}
       {depositPool && (

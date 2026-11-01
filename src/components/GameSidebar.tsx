@@ -1,4 +1,12 @@
-import { useEffect, useRef, useState, type CSSProperties, type ReactNode } from "react";
+import {
+  useEffect,
+  useRef,
+  useState,
+  type ComponentType,
+  type CSSProperties,
+  type ReactNode,
+  type SVGProps,
+} from "react";
 import { cn } from "@/utils/cn";
 import type { Car } from "@/data/cars";
 import type { Lang, Strings } from "@/i18n";
@@ -29,6 +37,57 @@ export const DOCK_RAIL = 56;
 export const DOCK_OPEN = 190;
 
 const LABEL = 118; // label column width while expanded
+
+/**
+ * One optical glyph size per group — mixed sizes (and non-square boxes) made the
+ * rail look uneven. Every icon sits centred in a fixed box so the rows line up.
+ */
+const ICON = { menu: 17, market: 14, util: 14, cta: 14, chevron: 10, hint: 7 } as const;
+/** fixed hit/alignment box around a menu glyph (identical collapsed/expanded) */
+const MENU_BOX = 26;
+const MARKET_BOX = 22;
+const UTIL_BOX = 26;
+
+/**
+ * Ink box of each rail icon inside the shared 24-unit grid: `[cx, cy, side]`,
+ * measured from the rendered paths. The drawings do not fill that grid evenly
+ * (the car ink is 20.8 × 10.9, the clipboard 14 × 19.5), so passing the same
+ * `width` made every glyph a different size and nudged it off-centre. Reading
+ * this table instead, `icon()` draws a square viewBox tight around the ink, so
+ * one number means one true optical size and the glyph is centred to the pixel.
+ */
+const INK = {
+  car: [12, 10.85, 20.8],
+  clipboard: [12, 12.25, 19.5],
+  flag: [11.65, 12, 19],
+  megaphone: [11.5, 12.5, 17],
+  store: [12, 12.5, 18],
+  bolt: [12, 12, 20],
+  star: [12.05, 11.85, 20.1],
+  coin: [12, 12, 21],
+  speaker: [12.4, 12, 18.8],
+  gear: [12, 12, 20.6],
+  fullscreen: [12, 12, 16],
+  plus: [12, 12, 15],
+  chevron: [12.75, 12, 13],
+} as const satisfies Record<string, readonly [number, number, number]>;
+
+type GlyphName = keyof typeof INK;
+type GlyphProps = SVGProps<SVGSVGElement>;
+
+/** render an icon at a given optical (ink) size, centred in its own box */
+function icon<E extends object = object>(
+  Icon: ComponentType<GlyphProps & E>,
+  name: GlyphName,
+  size: number,
+  extra?: E,
+) {
+  const [cx, cy, side] = INK[name];
+  const half = side / 2;
+  const viewBox = `${(cx - half).toFixed(2)} ${(cy - half).toFixed(2)} ${side} ${side}`;
+  const props = { width: size, height: size, viewBox, ...extra } as GlyphProps & E;
+  return <Icon {...props} />;
+}
 
 export interface GameSidebarProps {
   t: Strings;
@@ -112,38 +171,38 @@ export function GameSidebar(p: GameSidebarProps) {
   );
 
   const menu: { id: DockTab; text: string; icon: ReactNode; badge?: number }[] = [
-    { id: "garage", text: t.garage, icon: <CarIcon width={17} height={15} /> },
-    { id: "tasks", text: t.tabTasks, icon: <ClipboardIcon width={16} height={16} />, badge: taskBadge },
-    { id: "race", text: t.tabRace, icon: <FlagIcon width={15} height={15} /> },
-    { id: "news", text: t.tabNews, icon: <MegaphoneIcon width={16} height={16} /> },
+    { id: "garage", text: t.garage, icon: icon(CarIcon, "car", ICON.menu) },
+    { id: "tasks", text: t.tabTasks, icon: icon(ClipboardIcon, "clipboard", ICON.menu), badge: taskBadge },
+    { id: "race", text: t.tabRace, icon: icon(FlagIcon, "flag", ICON.menu) },
+    { id: "news", text: t.tabNews, icon: icon(MegaphoneIcon, "megaphone", ICON.menu) },
   ];
 
   const markets: { id: string; text: string; icon: ReactNode; onClick: () => void; tone: string }[] = [
     {
       id: "dealer",
       text: t.dealership,
-      icon: <StoreIcon width={13} height={13} />,
+      icon: icon(StoreIcon, "store", ICON.market),
       onClick: p.onOpenDealer,
       tone: "bg-amber-400/15 text-amber-400",
     },
     {
       id: "staking",
       text: t.staking,
-      icon: <BoltIcon width={13} height={13} />,
+      icon: icon(BoltIcon, "bolt", ICON.market),
       onClick: p.onOpenStaking,
       tone: "bg-mint-400/15 text-mint-400",
     },
     {
       id: "nft",
       text: t.nft,
-      icon: <StarBurstIcon width={12} height={12} />,
+      icon: icon(StarBurstIcon, "star", ICON.market),
       onClick: p.onOpenNft,
       tone: "bg-[#b48dff]/18 text-[#c4a7ff]",
     },
     {
       id: "coins",
       text: t.coinShop,
-      icon: <CoinIcon width={12} height={12} />,
+      icon: icon(CoinIcon, "coin", ICON.market),
       onClick: p.onOpenCoinShop,
       tone: "bg-[#ffb020]/16 text-[#ffc94a]",
     },
@@ -156,7 +215,7 @@ export function GameSidebar(p: GameSidebarProps) {
         <span className="whitespace-nowrap font-body text-[8.5px] font-black uppercase tracking-[0.15em] text-skyg-300/55">
           {text} <span className="text-white/25">· {count}</span>
         </span>
-        <ChevronIcon width={9} height={9} className="ms-auto shrink-0 text-white/20" />
+        {icon(ChevronIcon, "chevron", 9, { className: "ms-auto shrink-0 text-white/20" })}
       </div>
     ) : (
       <div className="my-[6px] h-[2px] w-[20px] shrink-0 self-center rounded-full bg-white/12" />
@@ -186,6 +245,8 @@ export function GameSidebar(p: GameSidebarProps) {
         )}
       >
         <span
+          data-sidebar-glyph="menu"
+          style={{ width: MENU_BOX, height: MENU_BOX }}
           className={cn(
             "relative flex shrink-0 items-center justify-center",
             active ? "text-[#5c3306]" : "text-skyg-300/70",
@@ -233,7 +294,11 @@ export function GameSidebar(p: GameSidebarProps) {
         expanded ? "ps-[5px] pe-[6px]" : "justify-center",
       )}
     >
-      <span className={cn("flex h-[20px] w-[20px] shrink-0 items-center justify-center rounded-[6px]", m.tone)}>
+      <span
+        data-sidebar-glyph="market"
+        style={{ width: MARKET_BOX, height: MARKET_BOX }}
+        className={cn("flex shrink-0 items-center justify-center rounded-[7px]", m.tone)}
+      >
         {m.icon}
       </span>
       <span className={cn(label, "font-body text-[11px] font-extrabold tracking-wide text-white/75")}>{m.text}</span>
@@ -258,8 +323,9 @@ export function GameSidebar(p: GameSidebarProps) {
       title={opts.label}
       aria-pressed={opts.on}
       onClick={opts.onClick}
+      style={{ width: UTIL_BOX, height: UTIL_BOX }}
       className={cn(
-        "flex h-[26px] w-[26px] shrink-0 items-center justify-center rounded-[8px] border-[2px] transition-all",
+        "flex shrink-0 items-center justify-center rounded-[8px] border-[2px] transition-all",
         "active:translate-y-[1px]",
         opts.on ? "border-mint-400/70 bg-mint-400/15 text-mint-400" : cn("border-white/10 bg-navy-800/70 hover:brightness-125", opts.tone),
       )}
@@ -317,7 +383,7 @@ export function GameSidebar(p: GameSidebarProps) {
                 data-sidebar-hint=""
                 className="absolute -end-[3px] -bottom-[3px] flex h-[13px] w-[13px] items-center justify-center rounded-full border-[2px] border-ink bg-gradient-to-b from-[#ffd23a] to-[#ff9a1f] text-[#4a2a00]"
               >
-                <ChevronIcon width={7} height={7} className={rotate ? "rotate-180" : undefined} />
+                {icon(ChevronIcon, "chevron", ICON.hint, { className: rotate ? "rotate-180" : undefined })}
               </span>
             )}
           </span>
@@ -329,11 +395,9 @@ export function GameSidebar(p: GameSidebarProps) {
           </span>
           {expanded && (
             <span className="ms-auto flex h-[20px] w-[20px] shrink-0 items-center justify-center rounded-[7px] border-[2px] border-white/15 bg-navy-800/80 text-white/60">
-              <ChevronIcon
-                width={11}
-                height={11}
-                className={cn("transition-transform duration-300", rotate && "rotate-180")}
-              />
+{icon(ChevronIcon, "chevron", ICON.chevron, {
+                className: cn("transition-transform duration-300", rotate && "rotate-180"),
+              })}
             </span>
           )}
         </button>
@@ -358,7 +422,7 @@ export function GameSidebar(p: GameSidebarProps) {
             {util({
               key: "sound",
               label: t.sound,
-              icon: <SpeakerIcon width={14} height={14} muted={!p.soundOn} />,
+              icon: icon(SpeakerIcon, "speaker", ICON.util, { muted: !p.soundOn }),
               onClick: p.onToggleSound,
               on: p.soundOn,
               tone: "text-mint-400",
@@ -375,7 +439,7 @@ export function GameSidebar(p: GameSidebarProps) {
             {util({
               key: "fullscreen",
               label: t.fullscreen,
-              icon: <FullscreenIcon width={13} height={13} exit={fs.active} />,
+              icon: icon(FullscreenIcon, "fullscreen", ICON.util, { exit: fs.active }),
               onClick: fs.toggle,
               on: fs.active,
               tone: "text-skyg-300",
@@ -384,7 +448,7 @@ export function GameSidebar(p: GameSidebarProps) {
             {util({
               key: "options",
               label: t.options,
-              icon: <GearIcon width={13} height={13} />,
+              icon: icon(GearIcon, "gear", ICON.util),
               onClick: p.onOptions,
               tone: "text-amber-400",
               attrs: { "data-sidebar-item": "settings" },
@@ -407,7 +471,7 @@ export function GameSidebar(p: GameSidebarProps) {
             )}
           >
             <span className="flex h-[24px] w-[24px] shrink-0 items-center justify-center rounded-full border-[2px] border-ink bg-gradient-to-b from-[#9ef05a] to-[#3d9a1f] text-white shadow-[0_2px_0_#1f5a10]">
-              <PlusIcon width={14} height={14} />
+              {icon(PlusIcon, "plus", ICON.cta)}
             </span>
             <span className={cn(label, "flex flex-col leading-none", !expanded && "hidden")}>
               <span className="font-display text-[10.5px] tracking-wide text-[#4a2a00]">{t.inviteFriend}</span>

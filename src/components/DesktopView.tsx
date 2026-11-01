@@ -36,13 +36,14 @@ import type { DailyView } from "@/data/daily";
 import { RacePanel, type RaceProps, type RaceTabs } from "./RacePanel";
 import type { StakingTab } from "./Staking";
 import { NewsPanel } from "./NewsPanel";
+import { HistoryPanel, type HistoryView } from "./HistoryPanel";
 import { StatPills, StatsRow } from "./Stats";
 import { DOCK_OPEN, DOCK_RAIL, GameSidebar, type DockSubs } from "./GameSidebar";
 import { CarFace } from "./BottomBar";
 import { SlotButton } from "./ui";
 import type { Player } from "./WelcomeScreen";
 
-export type RightTab = "race" | "garage" | "tasks" | "news";
+export type RightTab = "race" | "garage" | "tasks" | "news" | "history";
 
 export interface DesktopViewProps {
   t: Strings;
@@ -98,6 +99,9 @@ export interface DesktopViewProps {
   /** which view of the race panel is showing (modes / ranks) */
   raceTab: RaceTabs;
   onRaceTab: (v: RaceTabs) => void;
+  /** which slice of the coin ledger the history panel shows */
+  historyView: HistoryView;
+  onHistoryView: (v: HistoryView) => void;
 }
 
 const PANEL =
@@ -567,6 +571,7 @@ export function DesktopView(p: DesktopViewProps) {
     ["tasks", t.tabTasks],
     ["race", t.tabRace],
     ["news", t.tabNews],
+    ["history", t.historyTitle],
   ];
 
   /* dock accordions: a section that has tabs of its own lists them under its
@@ -592,6 +597,16 @@ export function DesktopView(p: DesktopViewProps) {
         },
       },
     ],
+    // the ledger filters the panel shows, listed under HISTORY as well
+    history: (["all", "in", "out"] as const).map((id) => ({
+      id,
+      text: { all: t.historyAll, in: t.historyIn, out: t.historyOut }[id],
+      active: p.rightTab === "history" && p.historyView === id,
+      onSelect: () => {
+        p.onRightTab("history");
+        p.onHistoryView(id);
+      },
+    })),
     // the staking screen has four tabs of its own: the dock lists them and
     // opens the screen straight on the picked one
     staking: (["pools", "stake", "nft", "loans"] as const).map((id) => ({
@@ -600,7 +615,24 @@ export function DesktopView(p: DesktopViewProps) {
       active: false,
       onSelect: () => p.onOpenStaking(id),
     })),
-  }), [t.raceTab, t.boardTab, t.tabPools, t.tabStake, t.tabNft, t.tabLoans, p.rightTab, p.raceTab, p.onRightTab, p.onRaceTab, p.onOpenStaking]);
+  }), [
+    t.raceTab,
+    t.boardTab,
+    t.historyAll,
+    t.historyIn,
+    t.historyOut,
+    t.tabPools,
+    t.tabStake,
+    t.tabNft,
+    t.tabLoans,
+    p.rightTab,
+    p.raceTab,
+    p.historyView,
+    p.onRightTab,
+    p.onRaceTab,
+    p.onHistoryView,
+    p.onOpenStaking,
+  ]);
 
   return (
     <div className="relative flex h-full flex-col">
@@ -701,7 +733,9 @@ export function DesktopView(p: DesktopViewProps) {
                 type="button"
                 onClick={() => p.onRightTab(key)}
                 className={cn(
-                  "relative min-w-[60px] whitespace-nowrap rounded-full px-[9px] py-[4px] font-display text-[13px] tracking-wide transition-colors",
+                  // five tabs share the panel width, so the padding is tight and
+                  // the min width is small: long Persian labels still have to fit
+                  "relative min-w-[48px] whitespace-nowrap rounded-full px-[7px] py-[4px] font-display text-[12px] tracking-wide transition-colors",
                   p.rightTab === key
                     ? "bg-gradient-to-b from-[#ffd23a] to-[#ff9a1f] text-white t-stroke sw-3"
                     : "text-white/55 hover:text-white",
@@ -724,7 +758,16 @@ export function DesktopView(p: DesktopViewProps) {
               key={p.rightTab}
               className="absolute inset-x-0 bottom-0 top-[26px] animate-slide-up rounded-[22px] border-[4px] border-ink bg-navy-950/80 px-[12px] pb-[12px] pt-[26px] shadow-[0_8px_0_#060a28,0_0_0_3px_rgba(120,200,255,0.35)] backdrop-blur-[2px]"
             >
-              {p.rightTab === "race" ? (
+              {p.rightTab === "history" ? (
+                <HistoryPanel
+                  t={t}
+                  lang={lang}
+                  history={p.garage.history}
+                  view={p.historyView}
+                  onView={p.onHistoryView}
+                  className="h-full"
+                />
+              ) : p.rightTab === "race" ? (
                 <RacePanel
                   t={t}
                   lang={lang}

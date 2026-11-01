@@ -3,6 +3,7 @@ import { cn } from "@/utils/cn";
 import type { Car, UpgradeKey } from "@/data/cars";
 import { UPGRADES, carStats, upgradeCost } from "@/data/cars";
 import type { Lang, Strings } from "@/i18n";
+import type { HistoryEntry } from "@/data/history";
 import { useAnimatedNumber, useDragScroll } from "@/hooks";
 import { useCoinFly } from "./CoinFlyEffect";
 import { BumperIcon, CoinIcon, EngineIcon, GaugeIcon, LockIcon, NitroIcon, PowerIcon, TireIcon } from "@/icons";
@@ -447,6 +448,8 @@ export function CarPicker({
 /** Garage data coming from the app state (always refers to an OWNED car). */
 export interface GarageData {
   car: Car;
+  /** coin ledger shown by the history tab */
+  history: HistoryEntry[];
   lang: Lang;
   levels: Record<UpgradeKey, number>;
   coins: number;

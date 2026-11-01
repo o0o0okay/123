@@ -5,6 +5,7 @@ import { DEFAULT_TASK_PROGRESS, type TaskProgress } from "./data/tasks";
 import { DEFAULT_DAILY, type DailyState } from "./data/daily";
 import { DEFAULT_DEFI, type DefiState } from "./data/staking";
 import { DEFAULT_NFT, nftById, type NftState } from "./data/nft";
+import { sanitizeHistory, type HistoryEntry } from "./data/history";
 
 export interface PlayerState {
   coins: number;
@@ -35,6 +36,8 @@ export interface PlayerState {
   defi: DefiState;
   /** car tokens owned in the NFT market + the ones staked in the vault */
   nft: NftState;
+  /** ledger of coins earned / spent and the assets that moved */
+  history: HistoryEntry[];
 }
 
 export interface PlayerScore {
@@ -68,6 +71,7 @@ export const DEFAULT_PLAYER: PlayerState = {
   score: { total: 0, runs: 0, wins: 0, best: {} },
   defi: { positions: [], loans: [], pools: [] },
   nft: { ...DEFAULT_NFT },
+  history: [],
 };
 
 export function loadPlayer(): PlayerState {
@@ -111,6 +115,7 @@ export function loadPlayer(): PlayerState {
         owned: Array.isArray(parsed.nft?.owned) ? parsed.nft.owned.filter((id) => nftById(id)) : DEFAULT_NFT.owned,
         stakes: Array.isArray(parsed.nft?.stakes) ? parsed.nft.stakes.filter((s) => nftById(s.nftId)) : DEFAULT_NFT.stakes,
       },
+      history: sanitizeHistory(parsed.history),
     };
   } catch {
     return DEFAULT_PLAYER;

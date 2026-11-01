@@ -21,6 +21,7 @@ import {
   FlagIcon,
   FullscreenIcon,
   GearIcon,
+  HistoryIcon,
   MegaphoneIcon,
   PlusIcon,
   SpeakerIcon,
@@ -30,7 +31,7 @@ import {
 import { CarFace } from "./BottomBar";
 
 /** Tabs the home dock can switch the right-hand panel to. */
-export type DockTab = "garage" | "tasks" | "race" | "news";
+export type DockTab = "garage" | "tasks" | "race" | "news" | "history";
 
 /** one row of a dock item's accordion (e.g. the two views of the race panel) */
 export interface DockSubItem {
@@ -86,6 +87,7 @@ const INK = {
   fullscreen: [12, 12, 16],
   plus: [12, 12, 15],
   chevron: [12.75, 12, 13],
+  history: [12, 12, 19.4],
 } as const satisfies Record<string, readonly [number, number, number]>;
 
 type GlyphName = keyof typeof INK;
@@ -207,6 +209,7 @@ export function GameSidebar(p: GameSidebarProps) {
     { id: "tasks", text: t.tabTasks, icon: icon(ClipboardIcon, "clipboard", ICON.menu), badge: taskBadge },
     { id: "race", text: t.tabRace, icon: icon(FlagIcon, "flag", ICON.menu) },
     { id: "news", text: t.tabNews, icon: icon(MegaphoneIcon, "megaphone", ICON.menu) },
+    { id: "history", text: t.historyTitle, icon: icon(HistoryIcon, "history", ICON.menu) },
   ];
 
   const markets: { id: string; text: string; icon: ReactNode; onClick: () => void; tone: string }[] = [
@@ -421,7 +424,7 @@ export function GameSidebar(p: GameSidebarProps) {
           </button>
         )}
 
-        {hasChildren && curtain(m.id, subs)}
+        {hasChildren && expanded && curtain(m.id, subs)}
       </div>
     );
   };
@@ -487,7 +490,7 @@ export function GameSidebar(p: GameSidebarProps) {
           </button>
         )}
 
-        {hasChildren && curtain(id, subs)}
+        {hasChildren && expanded && curtain(id, subs)}
       </div>
     );
   };

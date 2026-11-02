@@ -53,6 +53,22 @@ export const DOCK_RAIL = 56;
 /** Width of the expanded dock, in stage pixels (kept in sync with DesktopView). */
 export const DOCK_OPEN = 190;
 
+/**
+ * The one motion the dock and the board share.
+ *
+ * They used to run on different curves: the dock on a plain `ease-out` over
+ * 300ms, the board on an ease-out-expo that was 90% of the way there after
+ * ~120ms and then crawled. So the board finished while the dock was still
+ * opening, and the space being reclaimed read as a jump. Both now start
+ * gently, run for the same time and settle together — the board resizes *with*
+ * the dock instead of ahead of it.
+ */
+export const DOCK_MS = 440;
+/** symmetric: it eases out of the old size and into the new one, no front-load */
+export const DOCK_EASE = "cubic-bezier(0.65, 0, 0.35, 1)";
+/** the free strip the dock needs, plus a little air so the two never graze */
+export const DOCK_AIR = 18;
+
 const LABEL = 118; // label column width while expanded
 
 /**
@@ -131,6 +147,13 @@ export interface GameSidebarProps {
   taskBadge: number;
   /** accordion children of the sections that have tabs of their own */
   subs?: DockSubs;
+  /**
+   * Whether the dock is out. The home layout owns this so the dock's width and
+   * the board's size change in the same render — when the dock kept it to
+   * itself and reported it from an effect, the board's transition started a
+   * frame later and the space looked like it snapped open.
+   */
+  expanded?: boolean;
   /** reports every open/close so the layout can make room for the dock */
   onExpandedChange?: (open: boolean) => void;
 }
@@ -147,7 +170,12 @@ export interface GameSidebarProps {
 export function GameSidebar(p: GameSidebarProps) {
   const { t, lang, taskBadge } = p;
   const fs = useFullscreen();
-  const [open, setOpen] = useState(false);
+  const [openLocal, setOpenLocal] = useState(false);
+  const open = p.expanded ?? openLocal;
+  const setOpen = (v: boolean) => {
+    setOpenLocal(v);
+    p.onExpandedChange?.(v);
+  };
   /** dock section whose accordion is out; only one section is ever unfolded */
   const [openSub, setOpenSub] = useState<DockId | null>(null);
   const navRef = useRef<HTMLElement | null>(null);
@@ -164,12 +192,6 @@ export function GameSidebar(p: GameSidebarProps) {
     const list = subsRef.current?.[p.activeTab];
     setOpenSub(list && list.length ? p.activeTab : null);
   }, [p.activeTab]);
-
-  // let the home layout compact / relax around the dock
-  const notify = p.onExpandedChange;
-  useEffect(() => {
-    notify?.(expanded);
-  }, [expanded, notify]);
 
   // outside click + Escape close the panel
   useEffect(() => {
@@ -189,7 +211,7 @@ export function GameSidebar(p: GameSidebarProps) {
     };
   }, [open]);
 
-  const toggle = () => setOpen((v) => !v);
+  const toggle = () => setOpen(!open);
 
   /** a click on the empty part of the rail opens it; clicks on a button are its own */
   const onRailClick = (e: React.MouseEvent<HTMLElement>) => {
@@ -200,8 +222,9 @@ export function GameSidebar(p: GameSidebarProps) {
 
   /* label column: collapses to zero width so the rail stays centred */
   const label = cn(
-    "overflow-hidden whitespace-nowrap text-start transition-all duration-200 ease-out",
-    expanded ? "w-[var(--dock-label)] opacity-100 delay-75" : "w-0 opacity-0",
+    "overflow-hidden whitespace-nowrap text-start transition-all",
+    "duration-[var(--dock-ms)] ease-[var(--dock-ease)]",
+    expanded ? "w-[var(--dock-label)] opacity-100" : "w-0 opacity-0",
   );
 
   const menu: { id: DockTab; text: string; icon: ReactNode; badge?: number }[] = [
@@ -270,7 +293,7 @@ export function GameSidebar(p: GameSidebarProps) {
         data-sidebar-curtain={id}
         aria-hidden={!unfolded}
         className={cn(
-          "grid transition-all duration-300 ease-out",
+          "grid transition-all duration-[var(--dock-ms)] ease-[var(--dock-ease)]",
           unfolded ? "mt-[1px] grid-rows-[1fr] opacity-100" : "grid-rows-[0fr] opacity-0",
         )}
       >
@@ -375,6 +398,7 @@ export function GameSidebar(p: GameSidebarProps) {
             {m.icon}
           </span>
           <span
+            data-dock-label=""
             className={cn(
               label,
               "font-display text-[11.5px] tracking-wide",
@@ -417,7 +441,7 @@ export function GameSidebar(p: GameSidebarProps) {
           >
             {icon(ChevronIcon, "chevron", 10, {
               className: cn(
-                "transition-transform duration-300",
+                "transition-transform duration-[var(--dock-ms)] ease-[var(--dock-ease)]",
                 unfolded ? "rotate-90" : flip ? "rotate-180" : undefined,
               ),
             })}
@@ -483,7 +507,7 @@ export function GameSidebar(p: GameSidebarProps) {
           >
             {icon(ChevronIcon, "chevron", 9, {
               className: cn(
-                "transition-transform duration-300",
+                "transition-transform duration-[var(--dock-ms)] ease-[var(--dock-ease)]",
                 unfolded ? "rotate-90" : flip ? "rotate-180" : undefined,
               ),
             })}
@@ -541,6 +565,8 @@ export function GameSidebar(p: GameSidebarProps) {
             "--dock-label": `${LABEL}px`,
             "--dock-open": `${DOCK_OPEN}px`,
             "--dock-rail": `${DOCK_RAIL}px`,
+            "--dock-ms": `${DOCK_MS}ms`,
+            "--dock-ease": DOCK_EASE,
           } as CSSProperties
         }
         className={cn(
@@ -548,7 +574,7 @@ export function GameSidebar(p: GameSidebarProps) {
           "border-[3px] border-ink",
           "bg-[linear-gradient(180deg,#1e2c6b_0%,#141d52_48%,#0b1236_100%)]",
           "shadow-[0_8px_0_#060a28,0_18px_34px_rgba(4,9,32,0.5),inset_0_1px_0_rgba(160,205,255,0.28)]",
-          "transition-[width] duration-300 ease-out",
+          "transition-[width] duration-[var(--dock-ms)] ease-[var(--dock-ease)]",
           expanded ? "w-[var(--dock-open)]" : "w-[var(--dock-rail)]",
         )}
       >
@@ -586,7 +612,7 @@ export function GameSidebar(p: GameSidebarProps) {
           {expanded && (
             <span className="ms-auto flex h-[20px] w-[20px] shrink-0 items-center justify-center rounded-[7px] border-[2px] border-white/15 bg-navy-800/80 text-white/60">
 {icon(ChevronIcon, "chevron", ICON.chevron, {
-                className: cn("transition-transform duration-300", rotate && "rotate-180"),
+                className: cn("transition-transform duration-[var(--dock-ms)] ease-[var(--dock-ease)]", rotate && "rotate-180"),
               })}
             </span>
           )}

@@ -38,7 +38,7 @@ import type { StakingTab } from "./Staking";
 import { NewsPanel } from "./NewsPanel";
 import { HistoryPanel, type HistoryView } from "./HistoryPanel";
 import { StatPills, StatsRow } from "./Stats";
-import { DOCK_OPEN, DOCK_RAIL, GameSidebar, type DockSubs } from "./GameSidebar";
+import { DOCK_AIR, DOCK_EASE, DOCK_MS, DOCK_OPEN, DOCK_RAIL, GameSidebar, type DockSubs } from "./GameSidebar";
 import { CarFace } from "./BottomBar";
 import { SlotButton } from "./ui";
 import type { Player } from "./WelcomeScreen";
@@ -562,7 +562,7 @@ export function DesktopView(p: DesktopViewProps) {
     return () => ro.disconnect();
   }, [loggedIn]);
   /** free strip the dock needs on the inline-start edge */
-  const dockGutter = (compact ? DOCK_OPEN : DOCK_RAIL) + 10;
+  const dockGutter = (compact ? DOCK_OPEN : DOCK_RAIL) + DOCK_AIR;
   /** 1 when closed; just enough shrink for the open dock to fit beside the board */
   const fit = compact && boardW > 0 ? Math.max(0.7, (boardW - dockGutter) / boardW) : 1;
 
@@ -659,6 +659,7 @@ export function DesktopView(p: DesktopViewProps) {
             onInvite={p.onInvite}
             taskBadge={p.taskBadge}
             subs={dockSubs}
+            expanded={dockOpen}
             onExpandedChange={setDockOpen}
           />
         )}
@@ -674,10 +675,13 @@ export function DesktopView(p: DesktopViewProps) {
             transform: compact ? `scale(${fit})` : undefined,
             // shrink away from the dock: keep the far (inline-end) edge fixed
             transformOrigin: lang === "fa" ? "top left" : "top right",
+            // the very same motion the dock runs on, so the free strip grows
+            // and the board settles at the same instant
             transitionProperty: "transform, height, padding",
-            transitionDuration: "300ms",
-            transitionTimingFunction: "cubic-bezier(0.22, 1, 0.36, 1)",
-            paddingInlineStart: compact ? 0 : DOCK_RAIL + 10,
+            transitionDuration: `${DOCK_MS}ms`,
+            transitionTimingFunction: DOCK_EASE,
+            willChange: "transform",
+            paddingInlineStart: compact ? 0 : DOCK_RAIL + DOCK_AIR,
           }}
           className={cn(
             "absolute right-0 top-0 grid grid-cols-[370px_minmax(0,1fr)_350px] gap-[24px]",

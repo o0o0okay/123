@@ -52,6 +52,8 @@ interface Props {
   onOpenNft: () => void;
   /** opens the coin shop (buy coins with SOL) */
   onOpenCoinShop: () => void;
+  /** opens the driver's account board */
+  onOpenAccount: () => void;
   onEquip: (car: Car) => void;
   onStartChase: () => void;
   onLogout: () => void;
@@ -82,6 +84,7 @@ export function WelcomeScreen({
   onOpenStaking,
   onOpenNft,
   onOpenCoinShop,
+  onOpenAccount,
   onEquip,
   onStartChase,
   onLogout,
@@ -156,7 +159,18 @@ export function WelcomeScreen({
           <span className="text-white/25">|</span>
           <span className="text-skyg-300">{server}</span>
           <span className="text-white/25">|</span>
-          <span className="text-mint-400">#{player.id}</span>
+          <button
+            type="button"
+            onClick={onOpenAccount}
+            data-account-open=""
+            aria-label={t.accountOpen}
+            className="flex items-center gap-[3px] text-mint-400 transition-colors hover:text-white"
+          >
+            #{player.id}
+            <svg width={11} height={11} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={3.2} strokeLinecap="round" strokeLinejoin="round" className="text-mint-400/70">
+              <path d="M9 5l7 7-7 7" />
+            </svg>
+          </button>
         </div>
       </section>
 

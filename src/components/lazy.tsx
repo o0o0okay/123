@@ -34,6 +34,7 @@ export function loadPanel<T>(load: Loader<T>): Promise<T> {
 
 /** Chunk importers, shared by the panels and the hover warm-up. */
 export const panels = {
+  account: () => import("./Account").then((m) => m.Account),
   coinShop: () => import("./CoinShop").then((m) => m.CoinShop),
   dealership: () => import("./Dealership").then((m) => m.Dealership),
   nft: () => import("./NftMarket").then((m) => m.NftMarket),
@@ -44,6 +45,7 @@ export const panels = {
 
 /** Starts fetching a panel chunk before the player commits (hover / press / focus). */
 export const prefetch = {
+  account: () => void loadPanel(panels.account).catch(() => {}),
   coinShop: () => void loadPanel(panels.coinShop).catch(() => {}),
   dealership: () => void loadPanel(panels.dealership).catch(() => {}),
   nft: () => void loadPanel(panels.nft).catch(() => {}),

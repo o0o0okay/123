@@ -6,6 +6,7 @@ import { DEFAULT_DAILY, type DailyState } from "./data/daily";
 import { DEFAULT_DEFI, type DefiState } from "./data/staking";
 import { DEFAULT_NFT, nftById, type NftState } from "./data/nft";
 import { sanitizeHistory, type HistoryEntry } from "./data/history";
+import { activityFromHistory, sanitizeActivity, type ActivityMap } from "./data/engagement";
 
 export interface PlayerState {
   coins: number;
@@ -38,6 +39,13 @@ export interface PlayerState {
   nft: NftState;
   /** ledger of coins earned / spent and the assets that moved */
   history: HistoryEntry[];
+  /**
+   * Actions per local day, keyed `YYYY-MM-DD` — the raw material of the
+   * weekly-engagement calendar on the account page. Kept apart from the ledger
+   * because the ledger is capped at 120 rows: a busy evening would otherwise
+   * erase whole days from the calendar.
+   */
+  activity: ActivityMap;
 }
 
 export interface PlayerScore {
@@ -72,6 +80,7 @@ export const DEFAULT_PLAYER: PlayerState = {
   defi: { positions: [], loans: [], pools: [] },
   nft: { ...DEFAULT_NFT },
   history: [],
+  activity: {},
 };
 
 export function loadPlayer(): PlayerState {
@@ -88,6 +97,8 @@ export function loadPlayer(): PlayerState {
 
     const activeCarId =
       parsed.activeCarId && owned.includes(parsed.activeCarId) ? parsed.activeCarId : owned[0];
+
+    const history = sanitizeHistory(parsed.history);
 
     return {
       ...DEFAULT_PLAYER,
@@ -115,7 +126,9 @@ export function loadPlayer(): PlayerState {
         owned: Array.isArray(parsed.nft?.owned) ? parsed.nft.owned.filter((id) => nftById(id)) : DEFAULT_NFT.owned,
         stakes: Array.isArray(parsed.nft?.stakes) ? parsed.nft.stakes.filter((s) => nftById(s.nftId)) : DEFAULT_NFT.stakes,
       },
-      history: sanitizeHistory(parsed.history),
+      history,
+      // saves from before the calendar existed get one rebuilt from the ledger
+      activity: parsed.activity ? sanitizeActivity(parsed.activity) : activityFromHistory(history),
     };
   } catch {
     return DEFAULT_PLAYER;

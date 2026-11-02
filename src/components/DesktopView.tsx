@@ -73,6 +73,8 @@ export interface DesktopViewProps {
   onOpenNft: () => void;
   /** opens the coin shop (buy coins with SOL) */
   onOpenCoinShop: () => void;
+  /** opens the driver's account board (data + weekly engagement) */
+  onOpenAccount: () => void;
   onEquip: (car: Car) => void;
 
   screen: "login" | "loading" | "home";
@@ -653,6 +655,7 @@ export function DesktopView(p: DesktopViewProps) {
             onOpenStaking={p.onOpenStaking}
             onOpenNft={p.onOpenNft}
             onOpenCoinShop={p.onOpenCoinShop}
+            onOpenAccount={p.onOpenAccount}
             onToggleSound={p.onToggleSound}
             onToggleLang={p.onToggleLang}
             onOptions={p.onOptions}

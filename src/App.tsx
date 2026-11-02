@@ -51,6 +51,7 @@ import {
 } from "./data/staking";
 import { nftById, nftSellValue, nftStakeEarned } from "./data/nft";
 import { pushHistory, type HistoryEntry } from "./data/history";
+import { bumpActivity } from "./data/engagement";
 import type { HistoryView } from "./components/HistoryPanel";
 import {
   BackpackIcon,
@@ -122,6 +123,8 @@ function AppContent({
   const [dealerOpen, setDealerOpen] = useState(false);
   /** staking / liquidity / loans overlay */
   const [stakingOpen, setStakingOpen] = useState(false);
+  /** driver account board (profile data + weekly engagement) */
+  const [accountOpen, setAccountOpen] = useState(false);
   /** NFT marketplace overlay */
   const [nftOpen, setNftOpen] = useState(false);
   /** which board the staking panel opens on (pools / stake / nft / loans) */
@@ -226,7 +229,12 @@ function AppContent({
    * not a second calculation that could drift from the balance.
    */
   const log = useCallback((entry: Omit<HistoryEntry, "id" | "at">) => {
-    setPlayerState((p) => ({ ...p, history: pushHistory(p.history ?? [], entry) }));
+    setPlayerState((p) => ({
+      ...p,
+      history: pushHistory(p.history ?? [], entry),
+      // the ledger is capped, the calendar is not: count the day separately
+      activity: bumpActivity(p.activity, Date.now()),
+    }));
   }, []);
 
   useEffect(() => {
@@ -694,6 +702,16 @@ function AppContent({
   };
 
   /* ---------------- coin shop (buy coins with SOL) ---------------- */
+  const openAccount = () => {
+    sfx("click");
+    prefetch.account();
+    setAccountOpen(true);
+  };
+  const closeAccount = () => {
+    sfx("click");
+    setAccountOpen(false);
+  };
+
   const openCoinShop = () => {
     sfx("click");
     setCoinShopOpen(true);
@@ -1139,6 +1157,7 @@ function AppContent({
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
       if (e.key === "Escape") {
+        if (accountOpen) return setAccountOpen(false);
         if (coinShopOpen) return setCoinShopOpen(false);
         if (sellTarget) return setSellTarget(null);
         if (buyTarget) return setBuyTarget(null);
@@ -1428,6 +1447,7 @@ function AppContent({
           onOpenStaking={openStaking}
           onOpenNft={openNft}
           onOpenCoinShop={openCoinShop}
+          onOpenAccount={openAccount}
           onEquip={equip}
           screen={screen}
           player={player}
@@ -1482,6 +1502,7 @@ function AppContent({
           onOpenStaking={openStaking}
           onOpenNft={openNft}
           onOpenCoinShop={openCoinShop}
+          onOpenAccount={openAccount}
           onEquip={equip}
           onStartChase={startChase}
           onLogout={logout}
@@ -1592,6 +1613,40 @@ function AppContent({
             initialTab: stakingTab,
             onClose: closeStaking,
             onSfx: (n) => sfx(n),
+          }}
+        />
+      )}
+
+      {/* driver account: profile data + weekly engagement */}
+      {accountOpen && player && (
+        <LazyPanel
+          id="account"
+          load={panels.account}
+          label={t.accountPage}
+          props={{
+            t,
+            lang,
+            desk: isDesktop,
+            player: {
+              name: player.name,
+              id: player.id,
+              walletAddress: player.walletAddress,
+              provider: player.provider,
+            },
+            coins,
+            carsOwned: ownedCars.length,
+            activeCarName: activeCar.name,
+            races: playerState.raceCount,
+            wins: playerState.score.wins,
+            points: playerState.score.total,
+            tasksDone: playerState.tasksClaimed.length,
+            streak: playerState.daily.streak,
+            bestEscape: playerState.bestEscape,
+            defi: playerState.defi,
+            nft: playerState.nft,
+            history: playerState.history,
+            activity: playerState.activity,
+            onClose: closeAccount,
           }}
         />
       )}

@@ -834,6 +834,7 @@ export function NftMarket({
     <div
       className="fixed inset-0 z-[60] flex animate-fade-in flex-col overflow-hidden bg-[#06060c]"
       role="dialog"
+      data-board=""
       aria-label={t.nft}
     >
       {/* purple glow + faint grid, like the reference market */}

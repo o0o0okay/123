@@ -27,6 +27,7 @@ import {
   SpeakerIcon,
   StarBurstIcon,
   StoreIcon,
+  UserIcon,
 } from "@/icons";
 import { CarFace } from "./BottomBar";
 
@@ -195,15 +196,26 @@ export function GameSidebar(p: GameSidebarProps) {
     setOpenSub(list && list.length ? p.activeTab : null);
   }, [p.activeTab]);
 
-  // outside click + Escape close the panel
+  // outside click + Escape close the panel — but only while the home screen is
+  // actually in front. A click that opens a full-screen board is itself
+  // "outside" the dock, and the board is not mounted until the next render, so
+  // reading a prop here would miss it: ask the document instead.
   useEffect(() => {
     if (!open) return;
     const onDown = (e: PointerEvent) => {
       const el = navRef.current;
-      if (el && !el.contains(e.target as Node)) setOpen(false);
+      if (!el || el.contains(e.target as Node)) return;
+      // A press on a button that is about to raise a full-screen board (the
+      // top bar's STAKING, the shop…) must not count as "clicked away": the
+      // board mounts a tick later and by then the damage is done. Anything
+      // else outside is a real dismissal.
+      if ((e.target as HTMLElement | null)?.closest?.("button,a[href]")) return;
+      if (document.querySelector("[data-board]")) return;
+      setOpen(false);
     };
     const onKey = (e: KeyboardEvent) => {
-      if (e.key === "Escape") setOpen(false);
+      // Escape belongs to whatever is on top: a board in front closes first
+      if (e.key === "Escape" && !document.querySelector("[data-board]")) setOpen(false);
     };
     document.addEventListener("pointerdown", onDown, true);
     document.addEventListener("keydown", onKey);
@@ -638,6 +650,27 @@ export function GameSidebar(p: GameSidebarProps) {
                 {icon(ChevronIcon, "chevron", ICON.hint, { className: rotate ? "rotate-180" : undefined })}
               </span>
             </span>
+          </button>
+        )}
+
+        {/* the labelled way to the driver's own board. The face above does the
+            same thing, but an avatar is not an obvious door on its own. */}
+        {expanded && (
+          <button
+            type="button"
+            data-sidebar-account-row=""
+            onClick={p.onOpenAccount}
+            aria-label={t.accountOpen}
+            title={t.accountOpen}
+            className="mt-[4px] flex h-[30px] w-full shrink-0 items-center gap-[8px] rounded-[10px] border-[2px] border-[#b79bff]/35 bg-[#b79bff]/10 px-[7px] text-start transition-colors hover:border-[#b79bff]/70 hover:bg-[#b79bff]/18"
+          >
+            <span className="flex h-[18px] w-[18px] shrink-0 items-center justify-center rounded-[6px] bg-[#b79bff]/20 text-[#c9b4ff]">
+              <UserIcon width={11} height={11} />
+            </span>
+            <span className="min-w-0 flex-1 truncate font-body text-[10px] font-black tracking-[0.1em] text-[#c9b4ff]">
+              {t.accountPage}
+            </span>
+            {icon(ChevronIcon, "chevron", 9, { className: "shrink-0 text-[#b79bff]/70" })}
           </button>
         )}
 

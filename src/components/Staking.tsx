@@ -1427,6 +1427,7 @@ export function Staking({
     <div
       className="fixed inset-0 z-[60] flex animate-fade-in flex-col overflow-hidden bg-[#070a0c]"
       role="dialog"
+      data-board=""
       aria-label={t.staking}
     >
       {/* backdrop glows */}

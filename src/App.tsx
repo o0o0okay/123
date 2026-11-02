@@ -39,6 +39,7 @@ import {
   aprForFee,
   allPools,
   debtOf,
+  claimable,
   earnedOf,
   newId,
   poolName,
@@ -425,7 +426,7 @@ function AppContent({
     const item = stake ? nftById(stake.nftId) : undefined;
     if (!stake || !item) return false;
     const reward = Math.floor(nftStakeEarned(stake, item, now()));
-    if (reward < 1) {
+    if (!claimable(reward)) {
       sfx("error");
       showToast(fmt(t.tooSmall, { n: "1" }), "error");
       return false;
@@ -571,7 +572,7 @@ function AppContent({
     if (!position) return false;
     const reward = Math.floor(earnedOf(position, now()));
     // a fraction of a coin is not worth a transaction
-    if (reward < 1) {
+    if (!claimable(reward)) {
       return false;
     }
     sfx("coinJingle");

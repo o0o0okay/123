@@ -185,6 +185,20 @@ export function compact(n: number) {
   return String(Math.round(v));
 }
 
+/** whole coins a claim has to reach before it pays anything */
+export const MIN_CLAIM = 1;
+
+/**
+ * Whether a yield can be collected at all.
+ *
+ * Claims pay whole coins and anything under one is refused, so a claim button
+ * over a fraction of a coin can only fail. Screens use this to keep those
+ * buttons out of sight until the yield has actually crossed the line.
+ */
+export function claimable(earned: number) {
+  return Math.floor(earned) >= MIN_CLAIM;
+}
+
 /** yields keep four decimals while they are tiny */
 export function fmtYield(n: number) {
   if (!n) return "0";

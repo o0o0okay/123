@@ -13,6 +13,7 @@ import {
   allPools,
   aprForFee,
   compact,
+  claimable,
   debtOf,
   earnedOf,
   fmtYield,
@@ -311,6 +312,34 @@ function ActionButton({
   );
 }
 
+/**
+ * Claim action that only exists while there is something to collect.
+ *
+ * A claim under a fraction of a coin cannot pay — the wallet refuses anything
+ * below one whole coin — so the button would only ever produce an error. It is
+ * left out entirely until the yield crosses the line, then fades in.
+ */
+function ClaimButton({
+  earned,
+  label,
+  onClaim,
+  size = 12,
+  ...rest
+}: {
+  earned: number;
+  label: string;
+  onClaim: () => void;
+  size?: number;
+} & Record<string, unknown>) {
+  if (!claimable(earned)) return null;
+  return (
+    <ActionButton kind="primary" onClick={onClaim} className="animate-fade-in" {...rest}>
+      <Coin size={size} />
+      {label}
+    </ActionButton>
+  );
+}
+
 /* ------------------------------------------------------------------ */
 /* pools tab                                                           */
 /* ------------------------------------------------------------------ */
@@ -388,10 +417,12 @@ function PoolRow({
 
         {position && (
           <span className="hidden shrink-0 md:block">
-            <ActionButton kind="primary" onClick={() => onClaim(position.id)} data-claim={position.id}>
-              <Coin size={12} />
-              {t.claim}
-            </ActionButton>
+            <ClaimButton
+              earned={earned}
+              label={t.claim}
+              onClaim={() => onClaim(position.id)}
+              data-claim={position.id}
+            />
           </span>
         )}
         {!position && (
@@ -451,10 +482,12 @@ function PoolRow({
             </ActionButton>
             {position && (
               <>
-                <ActionButton kind="primary" onClick={() => onClaim(position.id)} data-claim={position.id}>
-                  <Coin size={12} />
-                  {t.claim}
-                </ActionButton>
+                <ClaimButton
+                  earned={earned}
+                  label={t.claim}
+                  onClaim={() => onClaim(position.id)}
+                  data-claim={position.id}
+                />
                 <ActionButton kind="plain" onClick={() => onWithdraw(position.id)} data-withdraw={position.id}>
                   <UndoIcon width={12} height={12} />
                   {t.withdraw}
@@ -710,6 +743,7 @@ function PositionCard({
   onWithdraw: (id: string) => void;
 }) {
   const left = lockLeft(position.unlockAt, now);
+  const earned = earnedOf(position, now);
   return (
     <div data-position={position.id} data-kind={position.kind} className="rounded-[16px] border-[2px] border-[#232a31] bg-[#14181c] px-[11px] py-[9px]">
       <div className="flex items-center gap-[8px]">
@@ -730,13 +764,16 @@ function PositionCard({
       </div>
       <div className="mt-[8px] flex items-center justify-between gap-[8px]">
         <Stat label={t.yourEarnings} tone="green">
-          {fmtYield(earnedOf(position, now))}
+          {fmtYield(earned)}
         </Stat>
         <div className="flex gap-[5px]">
-          <ActionButton kind="primary" onClick={() => onClaim(position.id)} data-claim={position.id}>
-            <Coin size={11} />
-            {t.claim}
-          </ActionButton>
+          <ClaimButton
+            earned={earned}
+            label={t.claim}
+            onClaim={() => onClaim(position.id)}
+            size={11}
+            data-claim={position.id}
+          />
           <ActionButton kind="plain" disabled={left.locked} onClick={() => onWithdraw(position.id)} data-withdraw={position.id}>
             {left.locked ? <LockIcon width={11} height={11} /> : <UndoIcon width={11} height={11} />}
             {t.withdraw}
@@ -1342,16 +1379,15 @@ export function Staking({
                       {t.nftInVault}
                     </span>
                     <div className="flex gap-[5px]">
-                      <ActionButton
-                        kind="primary"
-                        onClick={() => {
+                      <ClaimButton
+                        earned={earned}
+                        label={t.claim}
+                        size={11}
+                        onClaim={() => {
                           if (onClaimNft(stake.id)) setError(null);
                         }}
                         data-nft-claim={stake.id}
-                      >
-                        <Coin size={11} />
-                        {t.claim}
-                      </ActionButton>
+                      />
                       <ActionButton
                         kind="plain"
                         onClick={() => {

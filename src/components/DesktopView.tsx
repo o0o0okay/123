@@ -647,6 +647,7 @@ export function DesktopView(p: DesktopViewProps) {
             t={t}
             lang={lang}
             playerName={p.player?.name ?? "DRIVER"}
+            walletAddress={p.player?.walletAddress}
             car={p.garage.car}
             soundOn={p.settings.sound}
             activeTab={p.rightTab}

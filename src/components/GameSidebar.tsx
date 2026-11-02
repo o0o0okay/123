@@ -12,6 +12,7 @@ import type { Car } from "@/data/cars";
 import type { Lang, Strings } from "@/i18n";
 import type { StakingTab } from "./Staking";
 import { useFullscreen } from "@/hooks";
+import { shortenAddress } from "@/solana";
 import {
   BoltIcon,
   CarIcon,
@@ -129,6 +130,8 @@ export interface GameSidebarProps {
   lang: Lang;
   /** driver name shown under the greeting */
   playerName: string;
+  /** wallet address, shown on the account row (the name is already above it) */
+  walletAddress?: string;
   /** car used as the profile avatar (the one being driven) */
   car: Car;
   soundOn: boolean;
@@ -661,14 +664,25 @@ export function GameSidebar(p: GameSidebarProps) {
             data-sidebar-account-row=""
             onClick={p.onOpenAccount}
             aria-label={t.accountOpen}
-            title={t.accountOpen}
-            className="mt-[4px] flex h-[30px] w-full shrink-0 items-center gap-[8px] rounded-[10px] border-[2px] border-[#b79bff]/35 bg-[#b79bff]/10 px-[7px] text-start transition-colors hover:border-[#b79bff]/70 hover:bg-[#b79bff]/18"
+            title={p.walletAddress ? `${t.accountOpen} · ${p.walletAddress}` : t.accountOpen}
+            className="mt-[4px] flex w-full shrink-0 items-center gap-[7px] rounded-[10px] border-[2px] border-[#b79bff]/35 bg-[#b79bff]/10 px-[7px] py-[4px] text-start transition-colors hover:border-[#b79bff]/70 hover:bg-[#b79bff]/18"
           >
             <span className="flex h-[18px] w-[18px] shrink-0 items-center justify-center rounded-[6px] bg-[#b79bff]/20 text-[#c9b4ff]">
               <UserIcon width={11} height={11} />
             </span>
-            <span className="min-w-0 flex-1 truncate font-body text-[10px] font-black tracking-[0.1em] text-[#c9b4ff]">
-              {t.accountPage}
+            {/* the name is one line above, so repeating it here wastes the row:
+                the wallet address is the thing this row can add */}
+            <span className="flex min-w-0 flex-1 flex-col leading-none">
+              <span className="font-body text-[7.5px] font-black uppercase tracking-[0.14em] text-[#b79bff]/70">
+                {t.accountPage}
+              </span>
+              <span
+                data-sidebar-account-value=""
+                dir="ltr"
+                className="mt-[3px] truncate text-start font-mono text-[10.5px] font-bold tracking-tight text-[#e2d6ff]"
+              >
+                {p.walletAddress ? shortenAddress(p.walletAddress, 4) : p.playerName}
+              </span>
             </span>
             {icon(ChevronIcon, "chevron", 9, { className: "shrink-0 text-[#b79bff]/70" })}
           </button>

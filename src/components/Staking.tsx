@@ -313,27 +313,37 @@ function ActionButton({
 }
 
 /**
- * Claim action that only exists while there is something to collect.
+ * Claim action that reads as pressable only when there is something to collect.
  *
  * A claim under a fraction of a coin cannot pay — the wallet refuses anything
- * below one whole coin — so the button would only ever produce an error. It is
- * left out entirely until the yield crosses the line, then fades in.
+ * below one whole coin — so the button sits there greyed out instead of
+ * pretending to be pressable. It comes alive the moment the yield crosses the
+ * line, which also keeps every row the same width whether it can pay or not.
  */
 function ClaimButton({
   earned,
   label,
   onClaim,
   size = 12,
+  hint,
   ...rest
 }: {
   earned: number;
   label: string;
   onClaim: () => void;
   size?: number;
+  /** shown on hover while the claim is still too small to pay */
+  hint?: string;
 } & Record<string, unknown>) {
-  if (!claimable(earned)) return null;
+  const ready = claimable(earned);
   return (
-    <ActionButton kind="primary" onClick={onClaim} className="animate-fade-in" {...rest}>
+    <ActionButton
+      kind={ready ? "primary" : "ghost"}
+      disabled={!ready}
+      onClick={ready ? onClaim : undefined}
+      title={ready ? undefined : hint}
+      {...rest}
+    >
       <Coin size={size} />
       {label}
     </ActionButton>
@@ -420,6 +430,7 @@ function PoolRow({
             <ClaimButton
               earned={earned}
               label={t.claim}
+              hint={fmt(t.tooSmall, { n: "1" })}
               onClaim={() => onClaim(position.id)}
               data-claim={position.id}
             />
@@ -485,6 +496,7 @@ function PoolRow({
                 <ClaimButton
                   earned={earned}
                   label={t.claim}
+                  hint={fmt(t.tooSmall, { n: "1" })}
                   onClaim={() => onClaim(position.id)}
                   data-claim={position.id}
                 />
@@ -770,6 +782,7 @@ function PositionCard({
           <ClaimButton
             earned={earned}
             label={t.claim}
+            hint={fmt(t.tooSmall, { n: "1" })}
             onClaim={() => onClaim(position.id)}
             size={11}
             data-claim={position.id}
@@ -1382,6 +1395,7 @@ export function Staking({
                       <ClaimButton
                         earned={earned}
                         label={t.claim}
+                        hint={fmt(t.tooSmall, { n: "1" })}
                         size={11}
                         onClaim={() => {
                           if (onClaimNft(stake.id)) setError(null);

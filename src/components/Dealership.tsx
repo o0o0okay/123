@@ -1121,7 +1121,7 @@ export function Dealership({
 
   /* ---------------- layout ---------------- */
   return (
-    <div className="absolute inset-0 z-40 flex animate-fade-in flex-col overflow-hidden" role="dialog" aria-label={t.dealership}>
+    <div className="absolute inset-0 z-40 flex animate-fade-in flex-col overflow-hidden" role="dialog" data-board="" aria-label={t.dealership}>
       {/* backdrop */}
       <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_50%_20%,#1f3f86_0%,#0f1b4d_50%,#060a24_100%)]" />
       <div className="hex-pattern absolute inset-0 opacity-20" />

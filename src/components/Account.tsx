@@ -568,6 +568,7 @@ export function Account(p: AccountProps) {
       className="fixed inset-0 z-[60] flex animate-fade-in flex-col overflow-hidden bg-[#070a0c]"
       role="dialog"
       aria-label={t.accountPage}
+      data-board=""
       data-account=""
     >
       {/* backdrop glows + grid, matching the other boards */}

@@ -271,6 +271,7 @@ export function CoinShop({
     <div
       className="absolute inset-0 z-50 flex animate-fade-in items-center justify-center bg-navy-950/80 px-[8px] py-[10px] backdrop-blur-[3px]"
       role="dialog"
+      data-board=""
       aria-modal="true"
       aria-label={t.coinShop}
       onClick={onClose}

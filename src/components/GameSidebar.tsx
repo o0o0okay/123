@@ -139,6 +139,8 @@ export interface GameSidebarProps {
   onOpenStaking: (tab?: StakingTab) => void;
   onOpenNft: () => void;
   onOpenCoinShop: () => void;
+  /** opens the driver's account board: profile data + weekly engagement */
+  onOpenAccount: () => void;
   onToggleSound: () => void;
   onToggleLang: () => void;
   onOptions: () => void;
@@ -578,45 +580,66 @@ export function GameSidebar(p: GameSidebarProps) {
           expanded ? "w-[var(--dock-open)]" : "w-[var(--dock-rail)]",
         )}
       >
-        {/* profile header — also the pin / close control */}
-        <button
-          type="button"
-          data-sidebar-toggle=""
-          aria-expanded={expanded}
-          aria-label={expanded ? t.collapseMenu : t.expandMenu}
-          title={expanded ? t.collapseMenu : t.expandMenu}
-          onClick={toggle}
-          className={cn(
-            "flex w-full shrink-0 items-center gap-[8px] rounded-[12px] p-[2px] transition-colors hover:bg-white/10",
-            !expanded && "justify-center",
-          )}
-        >
-          <span className="relative shrink-0">
-            <CarFace car={p.car} size={30} className="border-[2.5px] border-amber-400 shadow-[0_2px_0_#0a1038]" />
-            {!expanded && (
-              /* collapsed hint: the rail is opened with a click */
+        {/* profile header — the driver's face opens the account board, the
+            chevron beside it folds the dock away. While the rail is collapsed
+            there is only room for one control, and that one has to be the
+            opener (a closed rail you cannot reopen is a dead end). */}
+        {expanded ? (
+          <div className="flex w-full shrink-0 items-center gap-[6px] rounded-[12px] p-[2px]">
+            <button
+              type="button"
+              data-sidebar-account=""
+              onClick={p.onOpenAccount}
+              aria-label={t.accountOpen}
+              title={t.accountOpen}
+              className="flex min-w-0 flex-1 items-center gap-[8px] rounded-[9px] p-[2px] text-start transition-colors hover:bg-white/10"
+            >
+              <span className="relative shrink-0">
+                <CarFace car={p.car} size={30} className="border-[2.5px] border-amber-400 shadow-[0_2px_0_#0a1038]" />
+              </span>
+              <span className="flex min-w-0 flex-1 flex-col leading-none">
+                <span className="font-body text-[8px] font-black uppercase tracking-[0.14em] text-skyg-300/60">
+                  {t.goodDay}
+                </span>
+                <span className="mt-[3px] truncate font-display text-[13px] tracking-wide text-white">{p.playerName}</span>
+              </span>
+            </button>
+            <button
+              type="button"
+              data-sidebar-toggle=""
+              aria-expanded={expanded}
+              aria-label={t.collapseMenu}
+              title={t.collapseMenu}
+              onClick={toggle}
+              className="flex h-[20px] w-[20px] shrink-0 items-center justify-center rounded-[7px] border-[2px] border-white/15 bg-navy-800/80 text-white/60 transition-colors hover:border-white/35 hover:text-white"
+            >
+              {icon(ChevronIcon, "chevron", ICON.chevron, {
+                className: cn("transition-transform duration-[var(--dock-ms)] ease-[var(--dock-ease)]", rotate && "rotate-180"),
+              })}
+            </button>
+          </div>
+        ) : (
+          <button
+            type="button"
+            data-sidebar-toggle=""
+            aria-expanded={expanded}
+            aria-label={t.expandMenu}
+            title={t.expandMenu}
+            onClick={toggle}
+            className="relative flex w-full shrink-0 items-center justify-center rounded-[12px] p-[2px] transition-colors hover:bg-white/10"
+          >
+            <span className="relative shrink-0">
+              <CarFace car={p.car} size={30} className="border-[2.5px] border-amber-400 shadow-[0_2px_0_#0a1038]" />
+              {/* collapsed hint: the rail is opened with a click */}
               <span
                 data-sidebar-hint=""
                 className="absolute -end-[3px] -bottom-[3px] flex h-[13px] w-[13px] items-center justify-center rounded-full border-[2px] border-ink bg-gradient-to-b from-[#ffd23a] to-[#ff9a1f] text-[#4a2a00]"
               >
                 {icon(ChevronIcon, "chevron", ICON.hint, { className: rotate ? "rotate-180" : undefined })}
               </span>
-            )}
-          </span>
-          <span className={cn(label, "flex min-w-0 flex-col leading-none")}>
-            <span className="font-body text-[8px] font-black uppercase tracking-[0.14em] text-skyg-300/60">
-              {t.goodDay}
             </span>
-            <span className="mt-[3px] truncate font-display text-[13px] tracking-wide text-white">{p.playerName}</span>
-          </span>
-          {expanded && (
-            <span className="ms-auto flex h-[20px] w-[20px] shrink-0 items-center justify-center rounded-[7px] border-[2px] border-white/15 bg-navy-800/80 text-white/60">
-{icon(ChevronIcon, "chevron", ICON.chevron, {
-                className: cn("transition-transform duration-[var(--dock-ms)] ease-[var(--dock-ease)]", rotate && "rotate-180"),
-              })}
-            </span>
-          )}
-        </button>
+          </button>
+        )}
 
         {/* scrolling body — keeps the rail usable on short screens */}
         <div className="no-scrollbar mt-[2px] flex min-h-0 flex-1 flex-col overflow-y-auto overflow-x-hidden">
